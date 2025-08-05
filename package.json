@@ -13,7 +13,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && prisma db push && next build"
+    "vercel-build": "prisma generate && prisma db push && next build",
+    "test:email": "node scripts/test-email.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

@@ -54,50 +54,61 @@ async function getAllAgents(req, res) {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
-    // First get all users with agent role
-    const userWhere = {
-      role: 'agent'
-    };
+    // First check if User table exists and has data
+    let users = [];
+    let totalCount = 0;
+    
+    try {
+      // First get all users with agent role
+      const userWhere = {
+        role: 'agent'
+      };
 
-    if (search) {
-      userWhere.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { phoneNumber: { contains: search, mode: 'insensitive' } },
-        { displayName: { contains: search, mode: 'insensitive' } }
-      ];
-    }
+      if (search) {
+        userWhere.OR = [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { phoneNumber: { contains: search, mode: 'insensitive' } },
+          { displayName: { contains: search, mode: 'insensitive' } }
+        ];
+      }
 
-    // Get users with agent role and their related agent data
-    const [users, totalCount] = await Promise.all([
-      prisma.user.findMany({
-        where: userWhere,
-        skip,
-        take,
-        include: {
-          agent: {
-            include: {
-              createdBy: {
-                select: {
-                  id: true,
-                  email: true,
-                  firstName: true,
-                  lastName: true
+      // Get users with agent role and their related agent data
+      [users, totalCount] = await Promise.all([
+        prisma.user.findMany({
+          where: userWhere,
+          skip,
+          take,
+          include: {
+            agent: {
+              include: {
+                createdBy: {
+                  select: {
+                    id: true,
+                    email: true,
+                    firstName: true,
+                    lastName: true
+                  }
                 }
+              }
+            },
+            _count: {
+              select: {
+                farmers: true
               }
             }
           },
-          _count: {
-            select: {
-              farmers: true
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.user.count({ where: userWhere })
-    ]);
+          orderBy: { createdAt: 'desc' }
+        }),
+        prisma.user.count({ where: userWhere })
+      ]);
+    } catch (dbError) {
+      console.error('Database connection error:', dbError);
+      // Return empty data if database connection fails
+      users = [];
+      totalCount = 0;
+    }
 
     // Apply additional filters based on agent data
     let filteredUsers = users;
@@ -111,7 +122,7 @@ async function getAllAgents(req, res) {
       });
     }
 
-    const totalPages = Math.ceil(totalCount / take);
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
 
     // Transform data to include both user and agent information
     const agentsData = filteredUsers.map(user => ({
