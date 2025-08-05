@@ -1,6 +1,7 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from 'next-auth/react';
+import { calculateFarmArea, validateGeoJsonPolygon } from '../../../lib/geoUtils';
 
 const prisma = new PrismaClient();
 
@@ -136,10 +137,31 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Farmer not found' });
       }
 
+      // Calculate farm area from polygon if provided
+      let calculatedFarmSize = farmSize;
+      let calculatedFarmArea = farmArea;
+      
+      if (farmPolygon && typeof farmPolygon === 'object') {
+        // Validate the polygon
+        if (validateGeoJsonPolygon(farmPolygon)) {
+          const areaCalculation = calculateFarmArea(farmPolygon);
+          calculatedFarmSize = areaCalculation.hectares; // Set farm size in hectares
+          calculatedFarmArea = areaCalculation.squareMeters; // Store area in square meters
+          
+          console.log('🧮 Calculated farm area:', {
+            hectares: areaCalculation.hectares,
+            squareMeters: areaCalculation.squareMeters,
+            acres: areaCalculation.acres
+          });
+        } else {
+          console.warn('⚠️ Invalid GeoJSON polygon provided');
+        }
+      }
+
       const farm = await prisma.farm.create({
         data: {
           farmerId,
-          farmSize,
+          farmSize: calculatedFarmSize ? parseFloat(calculatedFarmSize) : null,
           primaryCrop,
           produceCategory,
           farmOwnership,
@@ -149,21 +171,21 @@ export default async function handler(req, res) {
           farmWard,
           farmPollingUnit,
           secondaryCrop,
-          farmingExperience,
-          farmLatitude,
-          farmLongitude,
+          farmingExperience: farmingExperience ? parseInt(farmingExperience) : null,
+          farmLatitude: farmLatitude ? parseFloat(farmLatitude) : null,
+          farmLongitude: farmLongitude ? parseFloat(farmLongitude) : null,
           farmPolygon,
           soilType,
-          soilPH,
+          soilPH: soilPH ? parseFloat(soilPH) : null,
           soilFertility,
           farmCoordinates,
-          coordinateSystem,
-          farmArea,
-          farmElevation,
-          year,
+          coordinateSystem: coordinateSystem || 'WGS84',
+          farmArea: calculatedFarmArea ? parseFloat(calculatedFarmArea) : null,
+          farmElevation: farmElevation ? parseFloat(farmElevation) : null,
+          year: year ? parseFloat(year) : null,
           yieldSeason,
-          crop,
-          quantity,
+          crop: crop ? parseFloat(crop) : null,
+          quantity: quantity ? parseFloat(quantity) : null,
         },
         include: {
           farmer: {

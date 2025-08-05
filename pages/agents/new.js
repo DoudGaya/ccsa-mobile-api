@@ -50,11 +50,11 @@ export default function NewAgent() {
       const result = await response.json()
 
       if (response.ok) {
-        setSuccess(`Agent created successfully! Temporary password: ${result.tempPassword}`)
+        setSuccess(`Agent created successfully! Default password: 1234567890. The agent can use this to login and should change it after first login.`)
         reset()
         setTimeout(() => {
           router.push('/agents')
-        }, 3000)
+        }, 5000) // Give more time to read the password
       } else {
         setError(result.message || 'Failed to create agent')
       }
@@ -150,21 +150,46 @@ export default function NewAgent() {
 
               <div>
                 <label className="form-label">
-                  Phone Number
+                  NIN (National Identification Number) *
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Enter 11-digit NIN"
+                  {...register('nin', {
+                    required: 'NIN is required',
+                    pattern: {
+                      value: /^\d{11}$/,
+                      message: 'NIN must be exactly 11 digits'
+                    }
+                  })}
+                />
+                {errors.nin && (
+                  <p className="mt-1 text-sm text-red-600">{errors.nin.message}</p>
+                )}
+                <p className="mt-1 text-sm text-gray-500">
+                  This will be validated against NIMC database
+                </p>
+              </div>
+
+              <div>
+                <label className="form-label">
+                  Phone Number *
                 </label>
                 <input
                   type="tel"
                   className="form-input"
                   placeholder="e.g., +234 812 345 6789"
-                  {...register('phoneNumber', {
+                  {...register('phone', {
+                    required: 'Phone number is required',
                     pattern: {
                       value: /^(\+234|0)[789]\d{9}$/,
                       message: 'Please enter a valid Nigerian phone number'
                     }
                   })}
                 />
-                {errors.phoneNumber && (
-                  <p className="mt-1 text-sm text-red-600">{errors.phoneNumber.message}</p>
+                {errors.phone && (
+                  <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
                 )}
               </div>
 

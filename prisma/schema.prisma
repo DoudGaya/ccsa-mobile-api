@@ -21,14 +21,91 @@ model User {
   phoneNumber String?
   role        String   @default("agent") // "admin", "agent", "super_admin"
   isActive    Boolean  @default(true)
+  isVerified  Boolean  @default(false) // Email verification status
   lastLogin   DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
   // Relationships
   farmers     Farmer[]
+  agent       Agent?   // One-to-one relationship with Agent
+  createdAgents Agent[] @relation("AgentCreatedBy") // Agents created by this admin
   
   @@map("users")
+}
+
+model Agent {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  
+  // Personal Information (from NIN validation)
+  nin                   String    @unique
+  firstName             String
+  middleName            String?
+  lastName              String
+  dateOfBirth           DateTime?
+  gender                String?
+  maritalStatus         String?
+  employmentStatus      String?
+  photoUrl              String?   // Photo URL from NIN API
+  
+  // Contact Information
+  phone                 String    @unique
+  email                 String    @unique
+  whatsAppNumber        String?
+  alternativePhone      String?
+  
+  // Address Information
+  address               String?
+  city                  String?
+  state                 String?   // State of residence
+  localGovernment       String?   // LGA of assignment
+  ward                  String?   // Ward of assignment
+  pollingUnit           String?   // Polling unit of assignment
+  latitude              Float?
+  longitude             Float?
+  
+  // Bank Information
+  bankName              String?
+  accountName           String?
+  accountNumber         String?
+  bvn                   String?   @unique
+  
+  // Assignment Information
+  assignedState         String?   // State where agent operates
+  assignedLGA           String?   // LGA where agent operates
+  assignedWards         String[]  // Multiple wards agent can operate in
+  
+  // Employment Information
+  employmentType        String?   // "full-time", "part-time", "contract"
+  salary                Float?
+  commissionRate        Float?    // Commission percentage for farmer registrations
+  startDate             DateTime?
+  endDate               DateTime?
+  
+  // Performance Metrics
+  totalFarmersRegistered Int      @default(0)
+  activeAssignments      Int      @default(0)
+  performanceRating      Float?   // 1-5 rating
+  
+  // System Information
+  registrationDate      DateTime  @default(now())
+  activationDate        DateTime?
+  status                String    @default("pending") // "pending", "active", "suspended", "terminated"
+  activationToken       String?   // Token for account activation
+  activationTokenExpiry DateTime?
+  passwordResetToken    String?
+  passwordResetExpiry   DateTime?
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdByUserId       String?   // Admin who created this agent
+  
+  // Relationships
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdBy             User?     @relation("AgentCreatedBy", fields: [createdByUserId], references: [id])
+  
+  @@map("agents")
 }
 
 model Farmer {
@@ -180,4 +257,65 @@ model AuditLog {
   userId    String?
   timestamp DateTime @default(now())
   @@map("audit_logs")
+}
+
+// Location Models for Nigeria Administrative Divisions
+model State {
+  id                 String            @id @default(cuid())
+  name               String            @unique
+  code               String            @unique // State code
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  
+  // Relationships
+  localGovernments   LocalGovernment[]
+  
+  @@map("states")
+}
+
+model LocalGovernment {
+  id        String   @id @default(cuid())
+  name      String
+  code      String?  // LGA code if available
+  stateId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  state     State    @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  wards     Ward[]
+  
+  @@unique([name, stateId])
+  @@map("local_governments")
+}
+
+model Ward {
+  id                 String        @id @default(cuid())
+  name               String
+  code               String?       // Ward code if available
+  localGovernmentId  String
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  
+  // Relationships
+  localGovernment    LocalGovernment @relation(fields: [localGovernmentId], references: [id], onDelete: Cascade)
+  pollingUnits       PollingUnit[]
+  
+  @@unique([name, localGovernmentId])
+  @@map("wards")
+}
+
+model PollingUnit {
+  id        String   @id @default(cuid())
+  name      String
+  code      String?  // Polling unit code if available
+  wardId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  ward      Ward     @relation(fields: [wardId], references: [id], onDelete: Cascade)
+  
+  @@unique([name, wardId])
+  @@map("polling_units")
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import logo from '../public/ccsa-logo.png' // Adjust the path as necessary
 import {
   HomeIcon,
   UsersIcon,
@@ -13,6 +14,7 @@ import {
   Bars3Icon as MenuIcon,
   XMarkIcon as XIcon,
 } from '@heroicons/react/24/outline'
+import Image from 'next/image'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
@@ -113,10 +115,8 @@ function SidebarContent() {
     <div className="flex-1 flex flex-col min-h-0 border-r border-gray-200 bg-white">
       <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
         <div className="flex items-center flex-shrink-0 px-4">
-          <div className="h-8 w-8 flex items-center justify-center rounded bg-ccsa-blue">
-            <span className="text-white font-bold">🇳🇬</span>
-          </div>
-          <span className="ml-2 text-xl font-bold text-gray-900">CCSA Admin</span>
+          <Image src={logo} alt="CCSA Logo" width={200} height={200} className="h-12 w-auto" />
+         
         </div>
         
         <nav className="mt-5 flex-1 px-2 space-y-1">
@@ -128,13 +128,13 @@ function SidebarContent() {
                 href={item.href}
                 className={`${
                   isActive
-                    ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-700'
+                    ? 'bg-blue-100 text-ccsa-blue border-ccsa-blue border-r-2'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                } group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200`}
+                } group flex items-center px-2 py-2 text-sm font-medium  transition-colors duration-200`}
               >
                 <item.icon
                   className={`${
-                    isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
+                    isActive ? ' text-ccsa-blue' : 'text-gray-400 group-hover:text-gray-500'
                   } mr-3 flex-shrink-0 h-6 w-6`}
                 />
                 {item.name}

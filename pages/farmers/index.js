@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../../components/Layout'
@@ -15,8 +15,11 @@ export default function Farmers() {
   const router = useRouter()
   const [farmers, setFarmers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredFarmers, setFilteredFarmers] = useState([])
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
   const [filters, setFilters] = useState({
     state: '',
     gender: '',
@@ -30,37 +33,82 @@ export default function Farmers() {
       return
     }
     
-    fetchFarmers()
-  }, [session, status])
+    fetchFarmers(1, true) // Reset to first page
+  }, [session, status, filters])
 
   useEffect(() => {
     filterFarmers()
-  }, [farmers, searchTerm, filters])
+  }, [farmers, searchTerm])
 
-  const fetchFarmers = async () => {
+  // Infinite scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + document.documentElement.scrollTop
+        >= document.documentElement.offsetHeight - 1000 &&
+        hasMore &&
+        !loading &&
+        !loadingMore
+      ) {
+        loadMoreFarmers()
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [hasMore, loading, loadingMore, page])
+
+  const fetchFarmers = async (pageNum = 1, reset = false) => {
     try {
-      const response = await fetch('/api/farmers')
+      if (pageNum === 1) setLoading(true)
+      else setLoadingMore(true)
+
+      const queryParams = new URLSearchParams({
+        page: pageNum.toString(),
+        limit: '20',
+        search: searchTerm,
+        state: filters.state,
+        status: filters.status
+      })
+
+      const response = await fetch(`/api/farmers?${queryParams}`)
       if (response.ok) {
         const data = await response.json()
-        setFarmers(data.farmers || []) // Extract farmers array from response
+        const newFarmers = data.farmers || []
+        
+        if (reset || pageNum === 1) {
+          setFarmers(newFarmers)
+        } else {
+          setFarmers(prev => [...prev, ...newFarmers])
+        }
+        
+        setHasMore(newFarmers.length === 20) // If we got fewer than 20, no more pages
+        setPage(pageNum)
       } else {
         console.error('Failed to fetch farmers:', response.status)
-        setFarmers([]) // Set empty array on error
+        if (reset) setFarmers([])
       }
     } catch (error) {
       console.error('Error fetching farmers:', error)
-      setFarmers([]) // Set empty array on error
+      if (reset) setFarmers([])
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
 
+  const loadMoreFarmers = useCallback(() => {
+    if (!loadingMore && hasMore) {
+      fetchFarmers(page + 1, false)
+    }
+  }, [page, loadingMore, hasMore])
+
   const filterFarmers = () => {
-    // Ensure farmers is always an array
+    // Client-side filtering for search term only
     const farmersArray = Array.isArray(farmers) ? farmers : []
     let filtered = farmersArray
 
-    // Text search
+    // Text search (client-side for real-time feedback)
     if (searchTerm) {
       filtered = filtered.filter(farmer =>
         farmer.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -71,22 +119,17 @@ export default function Farmers() {
       )
     }
 
-    // State filter
-    if (filters.state) {
-      filtered = filtered.filter(farmer => farmer.state === filters.state)
-    }
-
-    // Gender filter
-    if (filters.gender) {
-      filtered = filtered.filter(farmer => farmer.gender === filters.gender)
-    }
-
-    // Status filter
-    if (filters.status) {
-      filtered = filtered.filter(farmer => farmer.status === filters.status)
-    }
-
     setFilteredFarmers(filtered)
+  }
+
+  // Handle filter changes
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }))
+    setPage(1)
+    setHasMore(true)
   }
 
   const formatDate = (dateString) => {
@@ -141,7 +184,7 @@ export default function Farmers() {
             <select
               className="form-input"
               value={filters.state}
-              onChange={(e) => setFilters({ ...filters, state: e.target.value })}
+              onChange={(e) => handleFilterChange('state', e.target.value)}
             >
               <option value="">All States</option>
               <option value="Kano">Kano</option>
@@ -154,18 +197,18 @@ export default function Farmers() {
             <select
               className="form-input"
               value={filters.gender}
-              onChange={(e) => setFilters({ ...filters, gender: e.target.value })}
+              onChange={(e) => handleFilterChange('gender', e.target.value)}
             >
               <option value="">All Genders</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
             </select>
 
             {/* Status Filter */}
             <select
               className="form-input"
               value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
             >
               <option value="">All Status</option>
               <option value="active">Active</option>
@@ -218,12 +261,17 @@ export default function Farmers() {
                         <Link 
                           href={`/farmers/${farmer.id}`}
                           className="text-blue-600 hover:text-blue-900"
+                          title="View Farmer Details"
                         >
                           <EyeIcon className="h-5 w-5" />
                         </Link>
-                        <button className="text-green-600 hover:text-green-900">
+                        <Link
+                          href={`/farmers/${farmer.id}/certificate`}
+                          className="text-green-600 hover:text-green-900"
+                          title="View Certificate"
+                        >
                           <DocumentTextIcon className="h-5 w-5" />
-                        </button>
+                        </Link>
                       </div>
                     </td>
                   </tr>
@@ -232,9 +280,25 @@ export default function Farmers() {
             </table>
           </div>
 
-          {filteredFarmers.length === 0 && (
+          {filteredFarmers.length === 0 && !loading && (
             <div className="text-center py-12">
               <p className="text-gray-500">No farmers found matching your criteria.</p>
+            </div>
+          )}
+
+          {/* Infinite scroll loading indicator */}
+          {loadingMore && (
+            <div className="text-center py-4 border-t">
+              <div className="inline-flex items-center">
+                <div className="spinner-small"></div>
+                <span className="ml-2 text-gray-500">Loading more farmers...</span>
+              </div>
+            </div>
+          )}
+
+          {!hasMore && farmers.length > 0 && (
+            <div className="text-center py-4 border-t">
+              <p className="text-gray-500">All farmers loaded</p>
             </div>
           )}
         </div>

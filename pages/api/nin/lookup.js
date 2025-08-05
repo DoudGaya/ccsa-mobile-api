@@ -76,6 +76,15 @@ async function lookupNINFromAPI(nin) {
 
 // GET /api/nin/lookup - Lookup NIN information
 export default authMiddleware(async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   const { method } = req;
 
   if (method !== 'GET') {

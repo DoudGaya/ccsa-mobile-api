@@ -1,26 +1,58 @@
 import prisma from '../../../lib/prisma';
 import { farmerSchema } from '../../../lib/validation';
-import { authMiddleware } from '../../../lib/auth';
+import { authMiddleware } from '../../../lib/authMiddleware';
+import { getSession } from 'next-auth/react';
 
 // GET /api/farmers/[id] - Get farmer by ID
 // PUT /api/farmers/[id] - Update farmer
 // DELETE /api/farmers/[id] - Delete farmer
-export default authMiddleware(async function handler(req, res) {
-  const { method } = req;
-  const { id } = req.query;
+export default async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  switch (method) {
-    case 'GET':
-      return await getFarmer(req, res, id);
-    case 'PUT':
-      return await updateFarmer(req, res, id);
-    case 'DELETE':
-      return await deleteFarmer(req, res, id);
-    default:
-      res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
-      return res.status(405).end(`Method ${method} Not Allowed`);
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
-});
+
+  try {
+    // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)
+    const session = await getSession({ req });
+    
+    if (session) {
+      // Web admin user - has access to all farmers
+      req.isAdmin = true;
+      req.user = { 
+        uid: session.user.id, 
+        email: session.user.email,
+        role: session.user.role 
+      };
+    } else {
+      // Mobile agent request - apply Firebase authentication middleware
+      await authMiddleware(req, res);
+      req.isAdmin = false;
+    }
+
+    const { method } = req;
+    const { id } = req.query;
+
+    switch (method) {
+      case 'GET':
+        return await getFarmer(req, res, id);
+      case 'PUT':
+        return await updateFarmer(req, res, id);
+      case 'DELETE':
+        return await deleteFarmer(req, res, id);
+      default:
+        res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+        return res.status(405).end(`Method ${method} Not Allowed`);
+    }
+  } catch (error) {
+    console.error('Farmer API error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
 
 async function getFarmer(req, res, id) {
   try {
@@ -29,6 +61,7 @@ async function getFarmer(req, res, id) {
       include: {
         referees: true,
         certificates: true,
+        farms: true, // Include farms data
         agent: {
           select: {
             id: true,

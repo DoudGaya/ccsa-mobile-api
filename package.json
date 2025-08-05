@@ -33,6 +33,7 @@
     "next": "15.3.5",
     "next-auth": "^4.24.5",
     "nodemailer": "^6.9.8",
+    "qrcode": "^1.5.4",
     "react": "19.1.0",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "19.1.0",

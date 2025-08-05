@@ -9,7 +9,9 @@ import {
   EnvelopeIcon as MailIcon,
   PhoneIcon,
   EyeIcon,
-  PencilIcon 
+  PencilIcon,
+  TrashIcon,
+  KeyIcon
 } from '@heroicons/react/24/outline'
 
 export default function Agents() {
@@ -36,13 +38,18 @@ export default function Agents() {
 
   const fetchAgents = async () => {
     try {
-      const response = await fetch('/api/agents')
+      const response = await fetch('/api/agents?limit=100') // Get more agents
       if (response.ok) {
         const data = await response.json()
-        setAgents(data)
+        if (data.success && data.data) {
+          setAgents(data.data.agents || [])
+        } else {
+          setAgents([])
+        }
       }
     } catch (error) {
       console.error('Error fetching agents:', error)
+      setAgents([])
     } finally {
       setLoading(false)
     }
@@ -55,11 +62,67 @@ export default function Agents() {
     }
 
     const filtered = agents.filter(agent =>
+      agent.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       agent.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       agent.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      agent.phoneNumber?.includes(searchTerm)
+      agent.phoneNumber?.includes(searchTerm) ||
+      agent.phone?.includes(searchTerm) ||
+      agent.nin?.includes(searchTerm)
     )
     setFilteredAgents(filtered)
+  }
+
+  const handleDeleteAgent = async (agentId, agentName) => {
+    if (!confirm(`Are you sure you want to delete agent "${agentName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/agents/${agentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert('Agent deleted successfully')
+        fetchAgents() // Refresh the list
+      } else {
+        alert(data.message || 'Failed to delete agent')
+      }
+    } catch (error) {
+      console.error('Error deleting agent:', error)
+      alert('Failed to delete agent')
+    }
+  }
+
+  const handleResetPassword = async (agentId, agentName) => {
+    if (!confirm(`Are you sure you want to reset the password for agent "${agentName}"? The password will be reset to the default.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/agents/${agentId}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert(`Password reset successfully. New password: ${data.data.newPassword}`)
+      } else {
+        alert(data.message || 'Failed to reset password')
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error)
+      alert('Failed to reset password')
+    }
   }
 
   const formatDate = (dateString) => {
@@ -126,24 +189,41 @@ export default function Agents() {
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <div className="h-12 w-12 bg-gray-200 rounded-full flex items-center justify-center">
-                      <UserIcon className="h-6 w-6 text-gray-500" />
+                      {agent.agent?.photoUrl ? (
+                        <img 
+                          src={agent.agent.photoUrl} 
+                          alt={agent.fullName}
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserIcon className="h-6 w-6 text-gray-500" />
+                      )}
                     </div>
                   </div>
                   <div className="ml-4 flex-1">
                     <h3 className="text-lg font-medium text-gray-900">
-                      {agent.displayName || agent.firstName + ' ' + agent.lastName}
+                      {agent.fullName || agent.displayName || `${agent.firstName || ''} ${agent.lastName || ''}`.trim()}
                     </h3>
                     <p className="text-sm text-gray-500">
                       {agent.role === 'agent' ? 'Enrollment Agent' : agent.role}
+                      {agent.agent?.nin && (
+                        <span className="ml-2 text-xs text-blue-600">
+                          NIN: {agent.agent.nin.slice(-4)}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex-shrink-0">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      agent.isActive 
+                      agent.isActive && agent.status === 'active'
                         ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
+                        : agent.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : agent.status === 'suspended'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {agent.isActive ? 'Active' : 'Inactive'}
+                      {agent.status === 'pending' ? 'Pending' : agent.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                 </div>
@@ -152,11 +232,22 @@ export default function Agents() {
                   <div className="flex items-center text-sm text-gray-500">
                     <MailIcon className="h-4 w-4 mr-2" />
                     {agent.email}
+                    {agent.isVerified && (
+                      <span className="ml-2 text-green-600 text-xs">✓ Verified</span>
+                    )}
                   </div>
-                  {agent.phoneNumber && (
+                  {(agent.phoneNumber || agent.phone) && (
                     <div className="flex items-center text-sm text-gray-500">
                       <PhoneIcon className="h-4 w-4 mr-2" />
-                      {agent.phoneNumber}
+                      {agent.phoneNumber || agent.phone}
+                    </div>
+                  )}
+                  {agent.assignedState && (
+                    <div className="flex items-center text-sm text-gray-500">
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        {agent.assignedState}
+                        {agent.assignedLGA && ` • ${agent.assignedLGA}`}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -164,7 +255,7 @@ export default function Agents() {
                 <div className="mt-4 grid grid-cols-3 gap-4 text-center">
                   <div>
                     <div className="text-lg font-semibold text-gray-900">
-                      {agent._count?.farmers || 0}
+                      {agent.totalFarmersRegistered || agent._count?.farmers || 0}
                     </div>
                     <div className="text-xs text-gray-500">Farmers</div>
                   </div>
@@ -182,21 +273,35 @@ export default function Agents() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex space-x-3">
+                <div className="mt-6 grid grid-cols-2 gap-2">
                   <Link 
                     href={`/agents/${agent.id}`}
-                    className="flex-1 btn-secondary text-center flex items-center justify-center"
+                    className="btn-secondary text-center flex items-center justify-center text-sm"
                   >
                     <EyeIcon className="h-4 w-4 mr-1" />
                     View
                   </Link>
                   <Link 
                     href={`/agents/${agent.id}/edit`}
-                    className="flex-1 btn-primary text-center flex items-center justify-center"
+                    className="btn-primary text-center flex items-center justify-center text-sm"
                   >
                     <PencilIcon className="h-4 w-4 mr-1" />
                     Edit
                   </Link>
+                  <button
+                    onClick={() => handleResetPassword(agent.id, agent.fullName)}
+                    className="btn-secondary text-center flex items-center justify-center text-sm"
+                  >
+                    <KeyIcon className="h-4 w-4 mr-1" />
+                    Reset Password
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAgent(agent.id, agent.fullName)}
+                    className="bg-red-600 text-white px-3 py-2 rounded-md text-center flex items-center justify-center text-sm hover:bg-red-700"
+                  >
+                    <TrashIcon className="h-4 w-4 mr-1" />
+                    Delete
+                  </button>
                 </div>
               </div>
             </div>
