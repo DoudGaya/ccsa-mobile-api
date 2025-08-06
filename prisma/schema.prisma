@@ -1,166 +1,135 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
-
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  password    String?  // For web admin users
-  displayName String?
-  firstName   String?
-  lastName    String?
-  phoneNumber String?
-  role        String   @default("agent") // "admin", "agent", "super_admin"
-  isActive    Boolean  @default(true)
-  isVerified  Boolean  @default(false) // Email verification status
-  lastLogin   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relationships
-  farmers     Farmer[]
-  agent       Agent?   // One-to-one relationship with Agent
-  createdAgents Agent[] @relation("AgentCreatedBy") // Agents created by this admin
-  
-  @@map("users")
+model agents {
+  id                                  String    @id
+  userId                              String    @unique
+  nin                                 String    @unique
+  firstName                           String
+  middleName                          String?
+  lastName                            String
+  dateOfBirth                         DateTime?
+  gender                              String?
+  maritalStatus                       String?
+  employmentStatus                    String?
+  photoUrl                            String?
+  phone                               String    @unique
+  email                               String    @unique
+  whatsAppNumber                      String?
+  alternativePhone                    String?
+  address                             String?
+  city                                String?
+  state                               String?
+  localGovernment                     String?
+  ward                                String?
+  pollingUnit                         String?
+  latitude                            Float?
+  longitude                           Float?
+  bankName                            String?
+  accountName                         String?
+  accountNumber                       String?
+  bvn                                 String?   @unique
+  assignedState                       String?
+  assignedLGA                         String?
+  assignedWards                       String[]
+  employmentType                      String?
+  salary                              Float?
+  commissionRate                      Float?
+  startDate                           DateTime?
+  endDate                             DateTime?
+  totalFarmersRegistered              Int       @default(0)
+  activeAssignments                   Int       @default(0)
+  performanceRating                   Float?
+  registrationDate                    DateTime  @default(now())
+  activationDate                      DateTime?
+  status                              String    @default("pending")
+  activationToken                     String?
+  activationTokenExpiry               DateTime?
+  passwordResetToken                  String?
+  passwordResetExpiry                 DateTime?
+  createdAt                           DateTime  @default(now())
+  updatedAt                           DateTime
+  createdByUserId                     String?
+  users_agents_createdByUserIdTousers users?    @relation("agents_createdByUserIdTousers", fields: [createdByUserId], references: [id])
+  users_agents_userIdTousers          users     @relation("agents_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Agent {
-  id                    String    @id @default(cuid())
-  userId                String    @unique
-  
-  // Personal Information (from NIN validation)
-  nin                   String    @unique
-  firstName             String
-  middleName            String?
-  lastName              String
-  dateOfBirth           DateTime?
-  gender                String?
-  maritalStatus         String?
-  employmentStatus      String?
-  photoUrl              String?   // Photo URL from NIN API
-  
-  // Contact Information
-  phone                 String    @unique
-  email                 String    @unique
-  whatsAppNumber        String?
-  alternativePhone      String?
-  
-  // Address Information
-  address               String?
-  city                  String?
-  state                 String?   // State of residence
-  localGovernment       String?   // LGA of assignment
-  ward                  String?   // Ward of assignment
-  pollingUnit           String?   // Polling unit of assignment
-  latitude              Float?
-  longitude             Float?
-  
-  // Bank Information
-  bankName              String?
-  accountName           String?
-  accountNumber         String?
-  bvn                   String?   @unique
-  
-  // Assignment Information
-  assignedState         String?   // State where agent operates
-  assignedLGA           String?   // LGA where agent operates
-  assignedWards         String[]  // Multiple wards agent can operate in
-  
-  // Employment Information
-  employmentType        String?   // "full-time", "part-time", "contract"
-  salary                Float?
-  commissionRate        Float?    // Commission percentage for farmer registrations
-  startDate             DateTime?
-  endDate               DateTime?
-  
-  // Performance Metrics
-  totalFarmersRegistered Int      @default(0)
-  activeAssignments      Int      @default(0)
-  performanceRating      Float?   // 1-5 rating
-  
-  // System Information
-  registrationDate      DateTime  @default(now())
-  activationDate        DateTime?
-  status                String    @default("pending") // "pending", "active", "suspended", "terminated"
-  activationToken       String?   // Token for account activation
-  activationTokenExpiry DateTime?
-  passwordResetToken    String?
-  passwordResetExpiry   DateTime?
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  createdByUserId       String?   // Admin who created this agent
-  
-  // Relationships
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdBy             User?     @relation("AgentCreatedBy", fields: [createdByUserId], references: [id])
-  
-  @@map("agents")
+model analytics {
+  id        String   @id
+  metric    String
+  value     Json
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
-model Farmer {
-  id                String    @id @default(cuid())
-  
-  // Personal Information (from NIN API)
-  nin               String    @unique
-  firstName         String
-  middleName        String?
-  lastName          String
-  dateOfBirth       DateTime?
-  gender            String?
-  state             String?   // birthstate from NIN API
-  lga               String?   // birthlga from NIN API
-  maritalStatus     String?
-  employmentStatus  String?
-  photoUrl          String?   // Photo URL from NIN API
-  
-  // Contact Information (manual entry)
-  phone             String    @unique
-  email             String?   @unique
-  whatsAppNumber    String?
-  
-  // Address Information (manual entry)
-  address           String?
-  ward              String?
-  latitude          Float?
-  longitude         Float?
-  
-  // Bank Information (manual entry)
-  bankName          String?
-  accountName       String?
-  accountNumber     String?
-  bvn               String?   @unique
-  
-  // System Information
-  registrationDate  DateTime  @default(now())
-  status            String    @default("active")
-  agentId           String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  // Relationships
-  agent             User?     @relation(fields: [agentId], references: [id])
-  referees          Referee[]
-  certificates      Certificate[]
-  farms             Farm[]    // One farmer can have multiple farms
-  
-  @@map("farmers")
+model audit_logs {
+  id        String   @id
+  action    String
+  tableName String
+  recordId  String?
+  oldValues Json?
+  newValues Json?
+  userId    String?
+  timestamp DateTime @default(now())
 }
 
-model Farm {
-  id                  String    @id @default(cuid())
-  
-  // Farm Basic Information
+model certificates {
+  id            String    @id
+  certificateId String    @unique
+  farmerId      String
+  issuedDate    DateTime  @default(now())
+  expiryDate    DateTime?
+  status        String    @default("active")
+  qrCode        String?
+  pdfPath       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  farmers       farmers   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+}
+
+model farmers {
+  id               String         @id
+  nin              String         @unique
+  firstName        String
+  middleName       String?
+  lastName         String
+  dateOfBirth      DateTime?
+  gender           String?
+  state            String?
+  lga              String?
+  maritalStatus    String?
+  employmentStatus String?
+  phone            String         @unique
+  email            String?        @unique
+  whatsAppNumber   String?
+  address          String?
+  ward             String?
+  latitude         Float?
+  longitude        Float?
+  bankName         String?
+  accountNumber    String?
+  bvn              String?        @unique
+  registrationDate DateTime       @default(now())
+  status           String         @default("active")
+  agentId          String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime
+  photoUrl         String?
+  accountName      String?
+  certificates     certificates[]
+  users            users?         @relation(fields: [agentId], references: [id])
+  farms            farms[]
+  referees         referees[]
+}
+
+model farms {
+  id                  String   @id
   farmSize            Float?
   primaryCrop         String?
   produceCategory     String?
@@ -175,147 +144,97 @@ model Farm {
   farmLatitude        Float?
   farmLongitude       Float?
   farmPolygon         Json?
-
-  // Farm Soil Information
-  soilType           String?
-  soilPH             Float?
-  soilFertility      String?
-
-  // Farm Geospatial Information
-  farmCoordinates    Json?     // GeoJSON format for farm boundaries
-  coordinateSystem   String?   @default("WGS84") // Coordinate system used (e.g., WGS84)
-  farmArea           Float?    // Area in square meters or hectares (calculated from polygon)
-  farmElevation      Float?    // Elevation in meters above sea level
-
-  // Farm Yield Information
-  year               Float?
-  yieldSeason        String?
-  crop               Float?
-  quantity           Float?
-  
-  // System Information
-  farmerId           String
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  
-  // Relationships
-  farmer             Farmer    @relation(fields: [farmerId], references: [id], onDelete: Cascade)
-  
-  @@map("farms")
+  soilType            String?
+  soilPH              Float?
+  soilFertility       String?
+  farmCoordinates     Json?
+  coordinateSystem    String?  @default("WGS84")
+  farmArea            Float?
+  farmElevation       Float?
+  year                Float?
+  yieldSeason         String?
+  crop                Float?
+  quantity            Float?
+  farmerId            String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime
+  farmers             farmers  @relation(fields: [farmerId], references: [id], onDelete: Cascade)
 }
 
-model Referee {
-  id           String @id @default(cuid())
+model local_governments {
+  id        String   @id
+  name      String
+  code      String?
+  stateId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  states    states   @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  wards     wards[]
+
+  @@unique([name, stateId])
+}
+
+model polling_units {
+  id        String   @id
+  name      String
+  code      String?
+  wardId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  wards     wards    @relation(fields: [wardId], references: [id], onDelete: Cascade)
+
+  @@unique([name, wardId])
+}
+
+model referees {
+  id           String   @id
   firstName    String
   lastName     String
   phone        String
   relationship String
   farmerId     String
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  // Relationships
-  farmer       Farmer @relation(fields: [farmerId], references: [id], onDelete: Cascade)
-  
-  @@map("referees")
+  updatedAt    DateTime
+  farmers      farmers  @relation(fields: [farmerId], references: [id], onDelete: Cascade)
 }
 
-model Certificate {
-  id            String   @id @default(cuid())
-  certificateId String   @unique
-  farmerId      String
-  issuedDate    DateTime @default(now())
-  expiryDate    DateTime?
-  status        String   @default("active")
-  qrCode        String?
-  pdfPath       String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  // Relationships
-  farmer        Farmer   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
-  
-  @@map("certificates")
+model states {
+  id                String              @id
+  name              String              @unique
+  code              String              @unique
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  local_governments local_governments[]
 }
 
-model Analytics {
-  id            String   @id @default(cuid())
-  metric        String
-  value         Json
-  date          DateTime @default(now())
-  createdAt     DateTime @default(now())
-  @@map("analytics")
+model users {
+  id                                   String    @id
+  email                                String    @unique
+  displayName                          String?
+  role                                 String    @default("agent")
+  createdAt                            DateTime  @default(now())
+  updatedAt                            DateTime
+  firstName                            String?
+  isActive                             Boolean   @default(true)
+  lastLogin                            DateTime?
+  lastName                             String?
+  password                             String?
+  phoneNumber                          String?
+  isVerified                           Boolean   @default(false)
+  agents_agents_createdByUserIdTousers agents[]  @relation("agents_createdByUserIdTousers")
+  agents_agents_userIdTousers          agents?   @relation("agents_userIdTousers")
+  farmers                              farmers[]
 }
 
-model AuditLog {
-  id        String   @id @default(cuid())
-  action    String
-  tableName String
-  recordId  String?
-  oldValues Json?
-  newValues Json?
-  userId    String?
-  timestamp DateTime @default(now())
-  @@map("audit_logs")
-}
+model wards {
+  id                String            @id
+  name              String
+  code              String?
+  localGovernmentId String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  polling_units     polling_units[]
+  local_governments local_governments @relation(fields: [localGovernmentId], references: [id], onDelete: Cascade)
 
-// Location Models for Nigeria Administrative Divisions
-model State {
-  id                 String            @id @default(cuid())
-  name               String            @unique
-  code               String            @unique // State code
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  
-  // Relationships
-  localGovernments   LocalGovernment[]
-  
-  @@map("states")
-}
-
-model LocalGovernment {
-  id        String   @id @default(cuid())
-  name      String
-  code      String?  // LGA code if available
-  stateId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relationships
-  state     State    @relation(fields: [stateId], references: [id], onDelete: Cascade)
-  wards     Ward[]
-  
-  @@unique([name, stateId])
-  @@map("local_governments")
-}
-
-model Ward {
-  id                 String        @id @default(cuid())
-  name               String
-  code               String?       // Ward code if available
-  localGovernmentId  String
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  
-  // Relationships
-  localGovernment    LocalGovernment @relation(fields: [localGovernmentId], references: [id], onDelete: Cascade)
-  pollingUnits       PollingUnit[]
-  
   @@unique([name, localGovernmentId])
-  @@map("wards")
-}
-
-model PollingUnit {
-  id        String   @id @default(cuid())
-  name      String
-  code      String?  // Polling unit code if available
-  wardId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relationships
-  ward      Ward     @relation(fields: [wardId], references: [id], onDelete: Cascade)
-  
-  @@unique([name, wardId])
-  @@map("polling_units")
 }

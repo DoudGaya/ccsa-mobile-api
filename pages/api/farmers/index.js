@@ -182,7 +182,18 @@ async function getFarmers(req, res) {
 
 async function createFarmer(req, res) {
   try {
+    console.log('=== FARMER CREATION DEBUG ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Request body keys:', Object.keys(req.body || {}));
+    
     const { nin, personalInfo, contactInfo, bankInfo, referees } = req.body;
+    
+    console.log('Extracted values:');
+    console.log('- nin:', nin);
+    console.log('- personalInfo:', personalInfo);
+    console.log('- contactInfo:', contactInfo);
+    console.log('- bankInfo:', bankInfo);
+    console.log('- referees:', referees);
 
     // Helper function to safely parse date
     const parseDate = (dateString) => {
@@ -281,19 +292,48 @@ async function createFarmer(req, res) {
     }
 
     // Create farmer with referees
-    console.log('Creating farmer with agentId:', req.user.uid);
+    // Handle agentId - ensure we have a valid agent
+    let agentId = req.user?.uid;
+    
+    if (!agentId || agentId === 'temp-user') {
+      // Try to find an existing user (not agent) since farmers.agentId references users.id
+      console.log('No valid agentId provided, looking for existing users...');
+      
+      try {
+        const existingUser = await prisma.user.findFirst({
+          where: { 
+            isActive: true,
+            role: { in: ['agent', 'admin'] }
+          },
+          orderBy: { createdAt: 'asc' } // Use the oldest active user
+        });
+        
+        if (existingUser) {
+          agentId = existingUser.id;
+          console.log('Using existing user ID as agentId:', agentId);
+        } else {
+          console.log('No active users found, farmer will be created without agent assignment');
+          agentId = null; // Allow null agentId if no users exist
+        }
+      } catch (error) {
+        console.log('Error finding users, proceeding without agent assignment:', error.message);
+        agentId = null;
+      }
+    }
+    
+    console.log('Creating farmer with agentId:', agentId);
     console.log('Farmer data preview:', {
       nin: farmerData.nin,
       firstName: farmerData.firstName,
       lastName: farmerData.lastName,
       phone: farmerData.phone,
-      agentId: req.user.uid,
+      agentId: agentId,
     });
     
     const farmer = await prisma.farmer.create({
       data: {
         ...farmerData,
-        agentId: req.user.uid, // Use uid instead of id
+        ...(agentId && { agentId }), // Only include agentId if it exists
         referees: {
           create: validatedReferees,
         },
