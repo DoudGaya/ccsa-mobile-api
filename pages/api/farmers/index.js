@@ -2,6 +2,7 @@ import prisma from '../../../lib/prisma';
 import { farmerSchema, refereeSchema } from '../../../lib/validation';
 import { authMiddleware } from '../../../lib/authMiddleware';
 import { getSession } from 'next-auth/react';
+import { asyncHandler, corsMiddleware } from '../../../lib/errorHandler';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -28,6 +29,12 @@ export default async function handler(req, res) {
     } else {
       // Mobile agent request - apply Firebase authentication middleware
       await authMiddleware(req, res);
+      
+      // Check if response was already sent by authMiddleware
+      if (res.headersSent) {
+        return;
+      }
+      
       req.isAdmin = false;
     }
     
@@ -44,9 +51,13 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('Farmers API error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    
+    // Don't send response if it was already sent
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Internal server error' });
+    }
   }
-}
+};
 
 async function getFarmers(req, res) {
   try {
@@ -63,7 +74,7 @@ async function getFarmers(req, res) {
     const whereClause = {
       status,
       // Only filter by agentId for mobile agents, not for web admins
-      ...(req.isAdmin ? {} : { agentId: req.user.uid }),
+      ...(req.isAdmin ? {} : { agentId: req.user?.uid }),
       ...(state && { state }),
       ...(search && {
         OR: [
@@ -235,8 +246,12 @@ async function createFarmer(req, res) {
       longitude: contactInfo.coordinates?.longitude,
       // Bank info
       bankName: bankInfo.bankName,
+      accountName: bankInfo.accountName,
       accountNumber: bankInfo.accountNumber,
       bvn: bankInfo.bvn,
+      
+      // Agent assignment
+      agentId: req.user.uid,
     };
 
     // Validate referees if provided

@@ -21,14 +21,74 @@ model User {
   phoneNumber String?
   role        String   @default("agent") // "admin", "agent", "super_admin"
   isActive    Boolean  @default(true)
+  isVerified  Boolean  @default(false)
   lastLogin   DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
   // Relationships
   farmers     Farmer[]
+  agent       Agent?
+  createdAgents Agent[] @relation("CreatedByUser")
   
   @@map("users")
+}
+
+model Agent {
+  id                      String    @id @default(cuid())
+  userId                  String    @unique
+  nin                     String    @unique
+  firstName               String
+  middleName              String?
+  lastName                String
+  dateOfBirth             DateTime?
+  gender                  String?
+  maritalStatus           String?
+  employmentStatus        String?
+  photoUrl                String?
+  phone                   String    @unique
+  email                   String    @unique
+  whatsAppNumber          String?
+  alternativePhone        String?
+  address                 String?
+  city                    String?
+  state                   String?
+  localGovernment         String?
+  ward                    String?
+  pollingUnit             String?
+  latitude                Float?
+  longitude               Float?
+  bankName                String?
+  accountName             String?
+  accountNumber           String?
+  bvn                     String?   @unique
+  assignedState           String?
+  assignedLGA             String?
+  assignedWards           String[]
+  employmentType          String?
+  salary                  Float?
+  commissionRate          Float?
+  startDate               DateTime?
+  endDate                 DateTime?
+  totalFarmersRegistered  Int       @default(0)
+  activeAssignments       Int       @default(0)
+  performanceRating       Float?
+  registrationDate        DateTime  @default(now())
+  activationDate          DateTime?
+  status                  String    @default("pending")
+  activationToken         String?
+  activationTokenExpiry   DateTime?
+  passwordResetToken      String?
+  passwordResetExpiry     DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  createdByUserId         String?
+  
+  // Relationships
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdBy               User?     @relation("CreatedByUser", fields: [createdByUserId], references: [id])
+  
+  @@map("agents")
 }
 
 model Farmer {
@@ -180,4 +240,64 @@ model AuditLog {
   userId    String?
   timestamp DateTime @default(now())
   @@map("audit_logs")
+}
+
+model State {
+  id              String             @id @default(cuid())
+  name            String             @unique
+  code            String             @unique
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  // Relationships
+  localGovernments LocalGovernment[]
+  
+  @@map("states")
+}
+
+model LocalGovernment {
+  id        String   @id @default(cuid())
+  name      String
+  code      String?
+  stateId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  state     State    @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  wards     Ward[]
+  
+  @@unique([name, stateId])
+  @@map("local_governments")
+}
+
+model Ward {
+  id                  String             @id @default(cuid())
+  name                String
+  code                String?
+  localGovernmentId   String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  
+  // Relationships
+  localGovernment     LocalGovernment    @relation(fields: [localGovernmentId], references: [id], onDelete: Cascade)
+  pollingUnits        PollingUnit[]
+  
+  @@unique([name, localGovernmentId])
+  @@map("wards")
+}
+
+model PollingUnit {
+  id        String   @id @default(cuid())
+  name      String
+  code      String?
+  wardId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  ward      Ward     @relation(fields: [wardId], references: [id], onDelete: Cascade)
+  
+  @@unique([name, wardId])
+  @@map("polling_units")
 }
