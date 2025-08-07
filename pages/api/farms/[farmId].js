@@ -1,7 +1,6 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from 'next-auth/react';
-import { calculateFarmArea, validateGeoJsonPolygon } from '../../../lib/geoUtils';
 
 const prisma = new PrismaClient();
 
@@ -16,14 +15,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Auth check temporarily disabled for development/production debugging
-    console.log('Farm by ID API - proceeding without auth check');
-    req.isAdmin = true; // Allow access for now
-    req.user = { 
-      uid: 'temp-user', 
-      email: 'temp@example.com',
-      role: 'admin' 
-    };
+    // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)
+    const session = await getSession({ req });
+    
+    if (session) {
+      // Web admin user - has access to all farms
+      req.isAdmin = true;
+      req.user = { 
+        uid: session.user.id, 
+        email: session.user.email,
+        role: session.user.role 
+      };
+    } else {
+      // Mobile agent request - apply Firebase authentication middleware
+      await authMiddleware(req, res);
+      req.isAdmin = false;
+    }
     
     const { farmId } = req.query;
 
@@ -56,43 +63,13 @@ export default async function handler(req, res) {
 
     if (req.method === 'PUT') {
       // Update a farm
-      const updateData = { ...req.body };
+      const updateData = req.body;
       
       // Remove farmerId from update data to prevent changing farm ownership
       delete updateData.farmerId;
       delete updateData.id;
       delete updateData.createdAt;
       delete updateData.updatedAt;
-
-      // Calculate farm area from polygon if provided
-      if (updateData.farmPolygon && typeof updateData.farmPolygon === 'object') {
-        // Validate the polygon
-        if (validateGeoJsonPolygon(updateData.farmPolygon)) {
-          const areaCalculation = calculateFarmArea(updateData.farmPolygon);
-          updateData.farmSize = areaCalculation.hectares; // Set farm size in hectares
-          updateData.farmArea = areaCalculation.squareMeters; // Store area in square meters
-          
-          console.log('🧮 Updated farm area:', {
-            hectares: areaCalculation.hectares,
-            squareMeters: areaCalculation.squareMeters,
-            acres: areaCalculation.acres
-          });
-        } else {
-          console.warn('⚠️ Invalid GeoJSON polygon provided in update');
-        }
-      }
-
-      // Convert numeric fields
-      if (updateData.farmSize) updateData.farmSize = parseFloat(updateData.farmSize);
-      if (updateData.farmingExperience) updateData.farmingExperience = parseInt(updateData.farmingExperience);
-      if (updateData.farmLatitude) updateData.farmLatitude = parseFloat(updateData.farmLatitude);
-      if (updateData.farmLongitude) updateData.farmLongitude = parseFloat(updateData.farmLongitude);
-      if (updateData.soilPH) updateData.soilPH = parseFloat(updateData.soilPH);
-      if (updateData.farmArea) updateData.farmArea = parseFloat(updateData.farmArea);
-      if (updateData.farmElevation) updateData.farmElevation = parseFloat(updateData.farmElevation);
-      if (updateData.year) updateData.year = parseFloat(updateData.year);
-      if (updateData.crop) updateData.crop = parseFloat(updateData.crop);
-      if (updateData.quantity) updateData.quantity = parseFloat(updateData.quantity);
 
       const farm = await prisma.farm.update({
         where: { id: farmId },

@@ -1,50 +1,26 @@
 import prisma from '../../../lib/prisma';
 import { farmerSchema } from '../../../lib/validation';
-import { authMiddleware } from '../../../lib/authMiddleware';
-import { getSession } from 'next-auth/react';
+import { authMiddleware } from '../../../lib/auth';
 
 // GET /api/farmers/[id] - Get farmer by ID
 // PUT /api/farmers/[id] - Update farmer
 // DELETE /api/farmers/[id] - Delete farmer
-export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+export default authMiddleware(async function handler(req, res) {
+  const { method } = req;
+  const { id } = req.query;
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  switch (method) {
+    case 'GET':
+      return await getFarmer(req, res, id);
+    case 'PUT':
+      return await updateFarmer(req, res, id);
+    case 'DELETE':
+      return await deleteFarmer(req, res, id);
+    default:
+      res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+      return res.status(405).end(`Method ${method} Not Allowed`);
   }
-
-  try {
-    // Auth check temporarily disabled for development/production debugging
-    console.log('Farmer by ID API - proceeding without auth check');
-    req.isAdmin = true; // Allow access for now
-    req.user = { 
-      uid: 'temp-user', 
-      email: 'temp@example.com',
-      role: 'admin' 
-    };
-
-    const { method } = req;
-    const { id } = req.query;
-
-    switch (method) {
-      case 'GET':
-        return await getFarmer(req, res, id);
-      case 'PUT':
-        return await updateFarmer(req, res, id);
-      case 'DELETE':
-        return await deleteFarmer(req, res, id);
-      default:
-        res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
-        return res.status(405).end(`Method ${method} Not Allowed`);
-    }
-  } catch (error) {
-    console.error('Farmer API error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-}
+});
 
 async function getFarmer(req, res, id) {
   try {
@@ -53,7 +29,6 @@ async function getFarmer(req, res, id) {
       include: {
         referees: true,
         certificates: true,
-        farms: true, // Include farms data
         agent: {
           select: {
             id: true,

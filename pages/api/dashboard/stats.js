@@ -7,9 +7,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Auth check temporarily disabled for development/production debugging
-    console.log('Dashboard stats API - proceeding without auth check');
+    const session = await getSession({ req })
     
+    if (!session) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
     // Get dashboard statistics
     const [totalFarmers, totalAgents, totalFarms, farmersThisMonth, recentRegistrations] = await Promise.all([
       // Total farmers count

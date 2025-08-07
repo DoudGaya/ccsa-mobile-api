@@ -1,7 +1,6 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from 'next-auth/react';
-import { calculateFarmArea, validateGeoJsonPolygon } from '../../../lib/geoUtils';
 
 const prisma = new PrismaClient();
 
@@ -16,14 +15,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Auth check temporarily disabled for development/production debugging
-    console.log('Farms API - proceeding without auth check');
-    req.isAdmin = true; // Allow access for now
-    req.user = { 
-      uid: 'temp-user', 
-      email: 'temp@example.com',
-      role: 'admin' 
-    };
+    // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)
+    const session = await getSession({ req });
+    
+    if (session) {
+      // Web admin user - has access to all farms
+      req.isAdmin = true;
+      req.user = { 
+        uid: session.user.id, 
+        email: session.user.email,
+        role: session.user.role 
+      };
+    } else {
+      // Mobile agent request - apply Firebase authentication middleware
+      await authMiddleware(req, res);
+      req.isAdmin = false;
+    }
     
     if (req.method === 'GET') {
       // Get all farms or farms by farmer ID
@@ -129,31 +136,10 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Farmer not found' });
       }
 
-      // Calculate farm area from polygon if provided
-      let calculatedFarmSize = farmSize;
-      let calculatedFarmArea = farmArea;
-      
-      if (farmPolygon && typeof farmPolygon === 'object') {
-        // Validate the polygon
-        if (validateGeoJsonPolygon(farmPolygon)) {
-          const areaCalculation = calculateFarmArea(farmPolygon);
-          calculatedFarmSize = areaCalculation.hectares; // Set farm size in hectares
-          calculatedFarmArea = areaCalculation.squareMeters; // Store area in square meters
-          
-          console.log('🧮 Calculated farm area:', {
-            hectares: areaCalculation.hectares,
-            squareMeters: areaCalculation.squareMeters,
-            acres: areaCalculation.acres
-          });
-        } else {
-          console.warn('⚠️ Invalid GeoJSON polygon provided');
-        }
-      }
-
       const farm = await prisma.farm.create({
         data: {
           farmerId,
-          farmSize: calculatedFarmSize ? parseFloat(calculatedFarmSize) : null,
+          farmSize,
           primaryCrop,
           produceCategory,
           farmOwnership,
@@ -163,21 +149,21 @@ export default async function handler(req, res) {
           farmWard,
           farmPollingUnit,
           secondaryCrop,
-          farmingExperience: farmingExperience ? parseInt(farmingExperience) : null,
-          farmLatitude: farmLatitude ? parseFloat(farmLatitude) : null,
-          farmLongitude: farmLongitude ? parseFloat(farmLongitude) : null,
+          farmingExperience,
+          farmLatitude,
+          farmLongitude,
           farmPolygon,
           soilType,
-          soilPH: soilPH ? parseFloat(soilPH) : null,
+          soilPH,
           soilFertility,
           farmCoordinates,
-          coordinateSystem: coordinateSystem || 'WGS84',
-          farmArea: calculatedFarmArea ? parseFloat(calculatedFarmArea) : null,
-          farmElevation: farmElevation ? parseFloat(farmElevation) : null,
-          year: year ? parseFloat(year) : null,
+          coordinateSystem,
+          farmArea,
+          farmElevation,
+          year,
           yieldSeason,
-          crop: crop ? parseFloat(crop) : null,
-          quantity: quantity ? parseFloat(quantity) : null,
+          crop,
+          quantity,
         },
         include: {
           farmer: {

@@ -2,8 +2,6 @@ import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import Image from 'next/image'
-import logo from '../public/ccsa-logo.png'
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -30,8 +28,9 @@ export default function Home() {
       
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <Image src={logo} alt='' className=' h-16 object-contain' />
-         
+          <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-ccsa-blue mb-4">
+            <span className="text-white font-bold text-2xl">🇳🇬</span>
+          </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">CCSA Admin Dashboard</h1>
           <p className="text-gray-600 mb-4">Farmers Information Management System</p>
           <div className="spinner mx-auto"></div>

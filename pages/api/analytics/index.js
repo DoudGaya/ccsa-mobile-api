@@ -8,14 +8,22 @@ async function handler(req, res) {
   }
 
   try {
-    // Auth check temporarily disabled for development/production debugging
-    console.log('Analytics API - proceeding without auth check');
-    req.isAdmin = true; // Allow access for now
-    req.user = { 
-      uid: 'temp-user', 
-      email: 'temp@example.com',
-      role: 'admin' 
-    };
+    // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)
+    const session = await getSession({ req });
+    
+    if (session) {
+      // Web admin user - has access to all analytics
+      req.isAdmin = true;
+      req.user = { 
+        uid: session.user.id, 
+        email: session.user.email,
+        role: session.user.role 
+      };
+    } else {
+      // Mobile agent request - apply Firebase authentication middleware
+      await authMiddleware(req, res);
+      req.isAdmin = false;
+    }
 
     let whereClause = {};
     if (!req.isAdmin) {
