@@ -195,7 +195,6 @@ export default function Analytics() {
       }
 
     } catch (err) {
-      console.error('Error fetching analytics data:', err)
       setError(err.message)
       
       // Set mock data even on error
@@ -830,7 +829,7 @@ export default function Analytics() {
         </div>
 
         {/* Comprehensive Analytics Grid */}
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-8 ">
           {/* Age Distribution vs Land Size */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Age Groups Overview</h3>
@@ -923,65 +922,7 @@ export default function Analytics() {
         </div>
 
         {/* Summary Stats */}
-        <div className="mt-8 bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Summary Statistics</h3>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{farmers.length}</div>
-              <div className="text-sm text-gray-600">Total Farmers</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{farms.length}</div>
-              <div className="text-sm text-gray-600">Total Farms</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">
-                {analytics.stateDistribution.length}
-              </div>
-              <div className="text-sm text-gray-600">States Covered</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {analytics.cropDistribution.length}
-              </div>
-              <div className="text-sm text-gray-600">Crop Varieties</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-indigo-600">
-                {analytics.lgaDistribution.length}
-              </div>
-              <div className="text-sm text-gray-600">LGAs Covered</div>
-            </div>
-          </div>
-          
-          {/* Additional Metrics */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mt-6 pt-6 border-t border-gray-200">
-            <div className="text-center">
-              <div className="text-xl font-bold text-teal-600">
-                {analytics.terrainDistribution.reduce((sum, item) => sum + item.count, 0)}
-              </div>
-              <div className="text-xs text-gray-600">Terrain Mapped</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-orange-600">
-                {analytics.irrigationDistribution.filter(item => item.method === 'Irrigated')[0]?.count || 0}
-              </div>
-              <div className="text-xs text-gray-600">Irrigated Farms</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-pink-600">
-                {analytics.ownershipDistribution.filter(item => item.type === 'Owned')[0]?.count || 0}
-              </div>
-              <div className="text-xs text-gray-600">Owned Farms</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-gray-600">
-                {Math.round(farms.reduce((sum, farm) => sum + (parseFloat(farm.farmSize) || 0), 0))}
-              </div>
-              <div className="text-xs text-gray-600">Total Hectares</div>
-            </div>
-          </div>
-        </div>
+     
       </div>
     </Layout>
   )

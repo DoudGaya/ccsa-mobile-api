@@ -36,24 +36,55 @@ export default function EditAgent() {
   const fetchAgentDetails = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/agents/${id}`)
-      if (!response.ok) throw new Error('Failed to fetch agent details')
-      const data = await response.json()
-      const agentData = data.agent
-      setAgent(agentData)
+      // Try main API first, then fallback
+      let response = await fetch(`/api/agents/${id}`)
       
-      // Set form values
-      setValue('displayName', agentData.displayName || '')
-      setValue('firstName', agentData.firstName || '')
-      setValue('lastName', agentData.lastName || '')
-      setValue('email', agentData.email || '')
-      setValue('phoneNumber', agentData.phoneNumber || '')
-      setValue('state', agentData.state || '')
-      setValue('lga', agentData.lga || '')
-      setValue('isActive', agentData.isActive)
+      if (!response.ok) {
+        console.log('Main agent API failed, trying fallback...')
+        response = await fetch(`/api/agents-details/${id}`)
+      }
+      
+      if (response.ok) {
+        const data = await response.json()
+        const agentData = data.agent || data
+        setAgent(agentData)
+        
+        // Set form values
+        setValue('displayName', agentData.displayName || '')
+        setValue('firstName', agentData.firstName || '')
+        setValue('lastName', agentData.lastName || '')
+        setValue('email', agentData.email || '')
+        setValue('phoneNumber', agentData.phone || agentData.phoneNumber || '')
+        setValue('state', agentData.state || '')
+        setValue('lga', agentData.lga || '')
+        setValue('isActive', agentData.isActive !== false)
+      } else {
+        throw new Error('Failed to fetch agent details')
+      }
     } catch (error) {
-      console.error('Error fetching agent:', error)
-      setError('Failed to load agent details')
+      console.error('Error fetching agent details, trying fallback:', error)
+      try {
+        const response = await fetch(`/api/agents-details/${id}`)
+        if (response.ok) {
+          const data = await response.json()
+          setAgent(data)
+          
+          // Set form values
+          setValue('displayName', data.displayName || '')
+          setValue('firstName', data.firstName || '')
+          setValue('lastName', data.lastName || '')
+          setValue('email', data.email || '')
+          setValue('phoneNumber', data.phone || data.phoneNumber || '')
+          setValue('state', data.state || '')
+          setValue('lga', data.lga || '')
+          setValue('isActive', data.isActive !== false)
+        } else {
+          throw new Error('Both APIs failed')
+        }
+      } catch (fallbackError) {
+        console.error('Fallback API also failed:', fallbackError)
+        setError('Failed to load agent details')
+      }
     } finally {
       setLoading(false)
     }

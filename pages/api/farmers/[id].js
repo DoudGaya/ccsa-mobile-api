@@ -1,29 +1,77 @@
 import prisma from '../../../lib/prisma';
 import { farmerSchema } from '../../../lib/validation';
-import { authMiddleware } from '../../../lib/auth';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]';
+import { authMiddleware } from '../../../lib/authMiddleware';
+import { Logger } from '../../../lib/logger';
 
 // GET /api/farmers/[id] - Get farmer by ID
 // PUT /api/farmers/[id] - Update farmer
 // DELETE /api/farmers/[id] - Delete farmer
-export default authMiddleware(async function handler(req, res) {
-  const { method } = req;
-  const { id } = req.query;
+export default async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  switch (method) {
-    case 'GET':
-      return await getFarmer(req, res, id);
-    case 'PUT':
-      return await updateFarmer(req, res, id);
-    case 'DELETE':
-      return await deleteFarmer(req, res, id);
-    default:
-      res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
-      return res.status(405).end(`Method ${method} Not Allowed`);
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
-});
+
+  try {
+    // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)
+    const session = await getServerSession(req, res, authOptions);
+    
+    if (session) {
+      // Web admin user - has access to all farmers
+      Logger.debug(`Web admin access: ${session.user.email}`);
+      req.isAdmin = true;
+      req.user = { 
+        uid: session.user.id, 
+        email: session.user.email,
+        role: session.user.role 
+      };
+    } else {
+      // Mobile agent request - apply Firebase authentication middleware
+      Logger.debug('Checking Firebase authentication for mobile agent');
+      await authMiddleware(req, res);
+      
+      // Check if response was already sent by authMiddleware
+      if (res.headersSent) {
+        return;
+      }
+      
+      req.isAdmin = false;
+    }
+
+    const { method } = req;
+    const { id } = req.query;
+
+    switch (method) {
+      case 'GET':
+        return await getFarmer(req, res, id);
+      case 'PUT':
+        return await updateFarmer(req, res, id);
+      case 'DELETE':
+        return await deleteFarmer(req, res, id);
+      default:
+        res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+        return res.status(405).end(`Method ${method} Not Allowed`);
+    }
+  } catch (error) {
+    Logger.error('Farmer API error:', error.message);
+    
+    // Don't send response if it was already sent
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+}
 
 async function getFarmer(req, res, id) {
   try {
+    Logger.debug(`Fetching farmer data for ID: ${id}`);
+    
     const farmer = await prisma.farmer.findUnique({
       where: { id },
       include: {
@@ -40,13 +88,18 @@ async function getFarmer(req, res, id) {
     });
 
     if (!farmer) {
+      Logger.warn(`Farmer not found in database for ID: ${id}`);
       return res.status(404).json({ error: 'Farmer not found' });
     }
 
+    Logger.debug(`Found farmer data for: ${farmer.firstName} ${farmer.lastName}`);
     return res.status(200).json(farmer);
   } catch (error) {
-    console.error('Error fetching farmer:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    Logger.error('Error fetching farmer from database:', error.message);
+    return res.status(500).json({ 
+      error: 'Failed to fetch farmer from database',
+      details: error.message 
+    });
   }
 }
 

@@ -39,17 +39,39 @@ export default function Farmers() {
 
   const fetchFarmers = async () => {
     try {
-      const response = await fetch('/api/farmers')
+      setLoading(true)
+      // Use the real API first
+      const response = await fetch('/api/farmers?limit=1000') // Use correct API path
+      
       if (response.ok) {
         const data = await response.json()
-        setFarmers(data.farmers || []) // Extract farmers array from response
+        console.log('Real farmers data received:', data)
+        setFarmers(data.farmers || [])
       } else {
-        console.error('Failed to fetch farmers:', response.status)
-        setFarmers([]) // Set empty array on error
+        console.log('Real API failed, trying fallback...')
+        // Only use fallback if real API fails
+        const fallbackResponse = await fetch('/api/farmers-fallback?limit=1000')
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json()
+          console.log('Fallback farmers data received:', fallbackData)
+          setFarmers(fallbackData.farmers || fallbackData)
+        } else {
+          console.error('Both APIs failed')
+          setFarmers([])
+        }
       }
     } catch (error) {
-      console.error('Error fetching farmers:', error)
-      setFarmers([]) // Set empty array on error
+      console.error('Error fetching farmers, trying fallback:', error)
+      try {
+        const response = await fetch('/api/farmers-fallback?limit=1000')
+        if (response.ok) {
+          const data = await response.json()
+          setFarmers(data.farmers || data)
+        }
+      } catch (fallbackError) {
+        console.error('Fallback API also failed:', fallbackError)
+        setFarmers([])
+      }
     } finally {
       setLoading(false)
     }
@@ -117,6 +139,26 @@ export default function Farmers() {
             <p className="mt-2 text-sm text-gray-700">
               Manage and view all registered farmers in the system.
             </p>
+          </div>
+        </div>
+
+          {/* Summary */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{filteredFarmers.length}</div>
+              <div className="text-sm text-gray-500">Showing Results</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{(Array.isArray(farmers) ? farmers : []).length}</div>
+              <div className="text-sm text-gray-500">Total Farmers</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">
+                {(Array.isArray(farmers) ? farmers : []).filter(f => f.status === 'active').length}
+              </div>
+              <div className="text-sm text-gray-500">Active Farmers</div>
+            </div>
           </div>
         </div>
 
@@ -218,12 +260,17 @@ export default function Farmers() {
                         <Link 
                           href={`/farmers/${farmer.id}`}
                           className="text-blue-600 hover:text-blue-900"
+                          title="View Details"
                         >
                           <EyeIcon className="h-5 w-5" />
                         </Link>
-                        <button className="text-green-600 hover:text-green-900">
+                        <Link
+                          href={`/certificates/farmer/${farmer.id}`}
+                          className="text-green-600 hover:text-green-900"
+                          title="View Certificate"
+                        >
                           <DocumentTextIcon className="h-5 w-5" />
-                        </button>
+                        </Link>
                       </div>
                     </td>
                   </tr>
@@ -239,25 +286,7 @@ export default function Farmers() {
           )}
         </div>
 
-        {/* Summary */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{filteredFarmers.length}</div>
-              <div className="text-sm text-gray-500">Showing Results</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{(Array.isArray(farmers) ? farmers : []).length}</div>
-              <div className="text-sm text-gray-500">Total Farmers</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">
-                {(Array.isArray(farmers) ? farmers : []).filter(f => f.status === 'active').length}
-              </div>
-              <div className="text-sm text-gray-500">Active Farmers</div>
-            </div>
-          </div>
-        </div>
+      
       </div>
     </Layout>
   )

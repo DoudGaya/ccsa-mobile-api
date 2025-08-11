@@ -11,7 +11,9 @@ import {
   UsersIcon,
   PencilIcon,
   ChartBarIcon,
-  MapPinIcon
+  MapPinIcon,
+  EyeIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 
 export default function AgentDetails() {
@@ -41,13 +43,38 @@ export default function AgentDetails() {
   const fetchAgentDetails = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/agents/${id}`)
-      if (!response.ok) throw new Error('Failed to fetch agent details')
-      const data = await response.json()
-      setAgent(data.agent)
-      setStats(data.stats)
+      
+      // Use the real API first - this should fetch actual database data with farmers
+      let response = await fetch(`/api/agents/${id}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        
+        // The API returns agent data directly with farmers included
+        setAgent(data)
+        
+        // Set stats from the real data
+        setStats({
+          totalFarmers: data.farmerStats?.totalRegistered || data._count?.farmers || 0,
+          activeFarmers: data.farmerStats?.activeThisMonth || 0,
+          recentRegistrations: data.farmerStats?.activeThisWeek || 0
+        })
+      } else {
+        // Only use fallback if real API fails
+        const fallbackResponse = await fetch(`/api/agents-details/${id}`)
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json()
+          setAgent(fallbackData)
+          setStats({
+            totalFarmers: fallbackData.farmerStats?.totalRegistered || fallbackData._count?.farmers || 0,
+            activeFarmers: fallbackData.farmerStats?.activeThisMonth || 0,
+            recentRegistrations: fallbackData.farmerStats?.activeThisWeek || 0
+          })
+        } else {
+          throw new Error('Failed to fetch agent details')
+        }
+      }
     } catch (error) {
-      console.error('Error fetching agent:', error)
       setError('Failed to load agent details')
     } finally {
       setLoading(false)
@@ -166,7 +193,7 @@ export default function AgentDetails() {
                     <label className="block text-sm font-medium text-gray-700">Phone Number</label>
                     <div className="mt-1 flex items-center">
                       <PhoneIcon className="h-5 w-5 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-900">{agent.phoneNumber || 'Not provided'}</span>
+                      <span className="text-sm text-gray-900">{agent.phone || agent.phoneNumber || 'Not provided'}</span>
                     </div>
                   </div>
                   <div>
@@ -242,6 +269,142 @@ export default function AgentDetails() {
                 </div>
               </div>
             </div>
+
+            {/* Registered Farmers */}
+            {agent.farmers && agent.farmers.length > 0 && (
+              <div className="bg-white shadow rounded-lg mt-6">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-lg font-medium text-gray-900">
+                    Registered Farmers ({agent.farmers.length})
+                  </h2>
+                </div>
+                <div className="overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Farmer
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Contact
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Location
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Registered
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {agent.farmers.map((farmer) => (
+                          <tr key={farmer.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-8 w-8">
+                                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <UserIcon className="h-4 w-4 text-gray-500" />
+                                  </div>
+                                </div>
+                                <div className="ml-3">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {(farmer.firstName || '').charAt(0).toUpperCase() + (farmer.firstName || '').slice(1).toLowerCase()} {(farmer.lastName || '').charAt(0).toUpperCase() + (farmer.lastName || '').slice(1).toLowerCase()}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    NIN: {farmer.nin}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{farmer.phone}</div>
+                              {farmer.email && (
+                                <div className="text-sm text-gray-500">{farmer.email}</div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {(farmer.state || '').charAt(0).toUpperCase() + (farmer.state || '').slice(1).toLowerCase()}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {(farmer.lga || '').charAt(0).toUpperCase() + (farmer.lga || '').slice(1).toLowerCase()}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                (farmer.status || 'active') === 'active'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {(farmer.status || 'active').charAt(0).toUpperCase() + (farmer.status || 'active').slice(1).toLowerCase()}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(farmer.createdAt).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <Link 
+                                href={`/farmers/${farmer.id}`}
+                                className="text-blue-600 hover:text-blue-900 mr-3"
+                                title="View Details"
+                              >
+                                <EyeIcon className="h-4 w-4 inline" />
+                              </Link>
+                              <Link 
+                                href={`/certificates/farmer/${farmer.id}`}
+                                className="text-green-600 hover:text-green-900"
+                                title="View Certificate"
+                              >
+                                <DocumentTextIcon className="h-4 w-4 inline" />
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Show "View All" link if there are many farmers */}
+                  {agent.farmers.length >= 10 && (
+                    <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                      <Link 
+                        href={`/farmers?agent=${agent.id}`}
+                        className="text-sm text-blue-600 hover:text-blue-900 font-medium"
+                      >
+                        View all farmers registered by this agent →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* No Farmers Message */}
+            {agent.farmers && agent.farmers.length === 0 && (
+              <div className="bg-white shadow rounded-lg mt-6">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-lg font-medium text-gray-900">Registered Farmers</h2>
+                </div>
+                <div className="px-6 py-12 text-center">
+                  <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No farmers registered</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    This agent hasn't registered any farmers yet.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}

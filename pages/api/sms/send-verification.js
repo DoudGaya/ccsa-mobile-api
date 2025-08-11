@@ -1,4 +1,5 @@
 import twilio from 'twilio';
+import { Logger } from '../../../lib/logger';
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -17,9 +18,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Phone number is required' });
     }
 
-    console.log('📱 Attempting to send SMS to:', phoneNumber);
-    console.log('🔑 Using Twilio Account SID:', process.env.TWILIO_ACCOUNT_SID);
-    console.log('🆔 Using Verify Service SID:', process.env.TWILIO_VERIFY_SERVICE_SID);
+    Logger.debug('Attempting to send SMS verification', { phoneNumber: phoneNumber.slice(-4) });
 
     // Send verification via Twilio
     const verification = await client.verify.v2
@@ -30,8 +29,10 @@ export default async function handler(req, res) {
         channel: 'sms'
       });
 
-    console.log('✅ SMS sent successfully:', verification.sid);
-    console.log('📋 Verification status:', verification.status);
+    Logger.debug('SMS verification sent', { 
+      verificationId: verification.sid, 
+      status: verification.status 
+    });
 
     res.status(200).json({
       success: true,
@@ -40,7 +41,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Twilio SMS error:', error);
+    Logger.error('Twilio SMS error:', error.message);
     
     // Handle specific Twilio errors
     if (error.code === 60200) {

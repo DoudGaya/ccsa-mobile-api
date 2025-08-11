@@ -6,14 +6,16 @@
   "scripts": {
     "dev": "next dev --turbopack -H 0.0.0.0 -p 3000",
     "build": "prisma generate && prisma db push && next build",
-    "start": "next start",
+    "build:prod": "NODE_ENV=production next build",
+    "start": "NODE_ENV=production next start",
+    "start:dev": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && prisma db push && next build"
+    "vercel-build": "NODE_ENV=production prisma generate && prisma db push && next build"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

@@ -1,4 +1,5 @@
 import twilio from 'twilio';
+import { Logger } from '../../../lib/logger';
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -25,7 +26,7 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('Verifying code:', code, 'for phone:', phoneNumber);
+    Logger.debug('Verifying SMS code', { phoneNumber: phoneNumber.slice(-4) });
 
     // Verify code with Twilio
     const verificationCheck = await client.verify.v2
@@ -38,7 +39,7 @@ export default async function handler(req, res) {
 
     const isVerified = verificationCheck.status === 'approved';
 
-    console.log('Verification result:', verificationCheck.status);
+    Logger.debug('SMS verification result', { status: verificationCheck.status });
 
     res.status(200).json({
       success: true,
@@ -47,7 +48,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Twilio verification error:', error);
+    Logger.error('Twilio verification error:', error.message);
     
     if (error.code === 20404) {
       return res.status(400).json({ 

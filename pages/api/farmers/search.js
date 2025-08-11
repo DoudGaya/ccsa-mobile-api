@@ -1,4 +1,5 @@
 import prisma from '../../../lib/prisma';
+import { findFarmersOptimized, countFarmersOptimized } from '../../../lib/db-utils';
 import { authMiddleware } from '../../../lib/authMiddleware';
 
 export default async function handler(req, res) {
@@ -61,26 +62,41 @@ export default async function handler(req, res) {
         ];
     }
 
-    const [farmers, total] = await Promise.all([
-      prisma.farmer.findMany({
-        where: whereClause,
-        include: {
-          referees: true,
-          certificates: true,
-          agent: {
-            select: {
-              id: true,
-              email: true,
-              displayName: true,
-            },
-          },
+    // For NIN searches, we typically only need the farmer without count
+    // This reduces database load for the most common search type
+    if (type === 'nin') {
+      const farmers = await findFarmersOptimized(whereClause, {
+        includeAgent: true,
+        includeReferees: false, // Skip referees for NIN search to reduce load
+        includeCertificates: false, // Skip certificates for NIN search
+        limit: parseInt(limit),
+        offset: parseInt(offset)
+      });
+
+      return res.status(200).json({
+        farmers,
+        pagination: {
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          total: farmers.length, // For NIN searches, we don't need exact total
+          hasMore: farmers.length >= parseInt(limit),
         },
-        orderBy: { createdAt: 'desc' },
-        skip: parseInt(offset),
-        take: parseInt(limit),
-      }),
-      prisma.farmer.count({ where: whereClause }),
-    ]);
+      });
+    }
+
+    // For other search types, use optimized queries but with full data
+    const farmers = await findFarmersOptimized(whereClause, {
+      includeAgent: true,
+      includeReferees: true,
+      includeCertificates: true,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    // Only get total count for non-NIN searches when really needed
+    const total = farmers.length >= parseInt(limit) 
+      ? await countFarmersOptimized(whereClause)
+      : farmers.length;
 
     return res.status(200).json({
       farmers,

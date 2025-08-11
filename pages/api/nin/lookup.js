@@ -1,35 +1,16 @@
 import { authMiddleware } from '../../../lib/auth';
+import { Logger } from '../../../lib/logger';
 
 // NIN API configuration
 const NIN_API_BASE_URL = process.env.NIN_API_BASE_URL;
 const NIN_API_KEY = process.env.NIN_API_KEY;
-
-// Mock NIN lookup service (fallback)
-const mockNINData = {
-  '12345678901': {
-    firstname: 'John',
-    middlename: 'Doe',
-    surname: 'Smith',
-    dateofbirth: '1990-01-15',
-    gender: 'M',
-    educationallevel: 'TERTIARY',
-  },
-  '98765432109': {
-    firstname: 'Jane',
-    middlename: 'Mary',
-    surname: 'Johnson',
-    dateofbirth: '1985-05-20',
-    gender: 'F',
-    educationallevel: 'SECONDARY',
-  },
-};
 
 // Function to lookup NIN from external API
 async function lookupNINFromAPI(nin) {
   try {
     const url = `${NIN_API_BASE_URL}/api/lookup/nin?op=level-4&nin=${nin}`;
     
-    console.log(`Making NIN API request to: ${NIN_API_BASE_URL}/api/lookup/nin?op=level-4&nin=****`);
+    Logger.debug(`Making NIN API request for NIN: ****${nin.slice(-4)}`);
     
     const response = await fetch(url, {
       method: "GET",
@@ -45,31 +26,16 @@ async function lookupNINFromAPI(nin) {
 
     const data = await response.json();
     
-    console.log("NIN Verification Response:", {
-      status: data.status,
-      isValid: data.status === 200,
-      ...(data.data ? {
-        personalInfo: {
-          firstname: data.data.firstname,
-          middlename: data.data.middlename,
-          surname: data.data.surname,
-          gender: data.data.gender,
-          educationallevel: data.data.educationallevel,
-          dateofbirth: data.data.dateofbirth,
-        }
-      } : {}),
-      ...(data.message ? { message: data.message } : {}),
-      ...(data.code ? { code: data.code } : {})
-    });
+    Logger.debug("NIN Verification Response status:", data.status);
     
     // Check if the API returned success
     if (data.status === 200 && data.data) {
-      return data.data; // Return the raw data from the API
+      return data.data;
     } else {
       throw new Error(data.message || 'NIN not found or invalid');
     }
   } catch (error) {
-    console.error('NIN API lookup error:', error);
+    Logger.error('NIN API lookup error:', error.message);
     throw error;
   }
 }
@@ -101,53 +67,26 @@ export default authMiddleware(async function handler(req, res) {
 
     let ninData;
 
-    // Try to lookup from external API first
+    // Try to lookup from external API
     if (NIN_API_BASE_URL && NIN_API_KEY) {
       try {
         ninData = await lookupNINFromAPI(nin);
       } catch (error) {
-        console.error('External NIN API failed, falling back to mock data:', error);
+        Logger.error('External NIN API failed:', error.message);
         
-        // If external API fails, use mock data
-        const mockData = mockNINData[nin];
-        if (mockData) {
-          ninData = {
-            firstname: mockData.firstname,
-            middlename: mockData.middlename,
-            surname: mockData.surname,
-            dateofbirth: mockData.dateofbirth,
-            gender: mockData.gender,
-            educationallevel: mockData.educationallevel,
-          };
-        } else {
-          return res.status(404).json({ 
-            error: 'NIN not found',
-            status: 404,
-            message: 'NIN not found and external API unavailable',
-            details: error.message 
-          });
-        }
-      }
-    } else {
-      // Use mock data if API credentials are not configured
-      console.warn('NIN API credentials not configured, using mock data');
-      const mockData = mockNINData[nin];
-      if (mockData) {
-        ninData = {
-          firstname: mockData.firstname,
-          middlename: mockData.middlename,
-          surname: mockData.surname,
-          dateofbirth: mockData.dateofbirth,
-          gender: mockData.gender,
-          educationallevel: mockData.educationallevel,
-        };
-      } else {
-        return res.status(404).json({ 
-          error: 'NIN not found in mock data',
-          status: 404,
-          message: 'NIN not found'
+        return res.status(503).json({ 
+          error: 'Service unavailable',
+          status: 503,
+          message: 'NIN verification service is temporarily unavailable'
         });
       }
+    } else {
+      Logger.warn('NIN API credentials not configured');
+      return res.status(503).json({ 
+        error: 'Service not configured',
+        status: 503,
+        message: 'NIN verification service is not available'
+      });
     }
 
     return res.status(200).json({
@@ -156,7 +95,7 @@ export default authMiddleware(async function handler(req, res) {
       data: ninData,
     });
   } catch (error) {
-    console.error('Error looking up NIN:', error);
+    Logger.error('Error in NIN lookup handler:', error.message);
     return res.status(500).json({ 
       error: 'Internal server error',
       status: 500,
