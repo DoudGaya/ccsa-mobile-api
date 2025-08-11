@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import prisma from '../../../lib/prisma'
+import { Logger } from '../../../lib/logger'
 
 export const authOptions = {
   providers: [
@@ -43,7 +44,7 @@ export const authOptions = {
             role: user.role,
           }
         } catch (error) {
-          console.error('Auth error:', error)
+          Logger.error('Auth error:', error.message)
           return null
         }
       }
@@ -73,6 +74,22 @@ export const authOptions = {
     error: '/auth/error',
   },
   secret: process.env.NEXTAUTH_SECRET,
+  // Ensure proper URL configuration for production
+  url: process.env.NEXTAUTH_URL,
+  // Add debug logging for production issues
+  debug: process.env.NODE_ENV === 'development',
+  // Configure for Vercel deployment
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
+  }
 }
 
 export default NextAuth(authOptions)

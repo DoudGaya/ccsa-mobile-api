@@ -1,12 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // swcMinify is enabled by default in Next.js 15
+  // Production optimizations
+  poweredByHeader: false,
+  compress: true,
+  
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb'
     },
   },
+  
+  // Configure for proper NextAuth functionality in production
   async headers() {
     return [
       {
@@ -26,8 +31,23 @@ const nextConfig = {
           },
         ],
       },
+      // Specific headers for NextAuth
+      {
+        source: '/api/auth/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000',
+          },
+          {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true',
+          },
+        ],
+      },
     ];
   },
+  
   async rewrites() {
     return [
       {
@@ -36,6 +56,18 @@ const nextConfig = {
       },
     ];
   },
+  
+  // Ensure proper handling of API routes
+  trailingSlash: false,
+  
+  // Production optimizations
+  ...(process.env.NODE_ENV === 'production' && {
+    compiler: {
+      removeConsole: {
+        exclude: ['error', 'warn']
+      }
+    }
+  })
 };
 
 module.exports = nextConfig;
