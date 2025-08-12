@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '../../../lib/prisma';
+import { auth as firebaseAuth } from '../../../lib/firebase-admin';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -143,6 +144,8 @@ async function getAgents(req, res) {
 }
 
 async function createAgent(req, res) {
+  let firebaseUser = null; // Declare at function scope for cleanup
+  
   try {
     const { email, firstName, lastName, displayName, phoneNumber } = req.body;
 
@@ -153,29 +156,66 @@ async function createAgent(req, res) {
       return res.status(400).json({ error: 'Email and either first name or display name are required' });
     }
 
-    // Check if user already exists
+    // Check if user already exists in database
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
 
     if (existingUser) {
-      console.log('User already exists:', existingUser.email);
+      console.log('User already exists in database:', existingUser.email);
       return res.status(400).json({ error: 'User with this email already exists' });
+    }
+
+    // Check if user already exists in Firebase
+    try {
+      firebaseUser = await firebaseAuth.getUserByEmail(email);
+      if (firebaseUser) {
+        console.log('User already exists in Firebase:', firebaseUser.email);
+        return res.status(400).json({ error: 'User with this email already exists in Firebase' });
+      }
+    } catch (firebaseError) {
+      // If user doesn't exist in Firebase, that's what we want
+      if (firebaseError.code !== 'auth/user-not-found') {
+        console.error('Firebase error checking user:', firebaseError);
+        return res.status(500).json({ error: 'Error checking Firebase user existence' });
+      }
     }
 
     // Set default password and display name
     const defaultPassword = '1234567890';
     const finalDisplayName = displayName || `${firstName} ${lastName}`.trim();
 
-    console.log('Creating user with:', { email, finalDisplayName, firstName, lastName, phoneNumber, role: 'agent' });
+    console.log('Creating users in both Firebase and database...');
 
-    // Hash the default password
+    // Create Firebase user first
+    try {
+      firebaseUser = await firebaseAuth.createUser({
+        email,
+        password: defaultPassword,
+        displayName: finalDisplayName,
+        phoneNumber: phoneNumber ? phoneNumber.replace(/\s+/g, '') : undefined, // Remove spaces for Firebase
+        emailVerified: true,
+        disabled: false
+      });
+      
+      console.log('Firebase user created successfully:', { uid: firebaseUser.uid, email: firebaseUser.email });
+    } catch (firebaseError) {
+      console.error('Error creating Firebase user:', firebaseError);
+      return res.status(500).json({ 
+        error: 'Failed to create Firebase user',
+        details: firebaseError.message 
+      });
+    }
+
+    // Create database user with Firebase UID
+    console.log('Creating database user with Firebase UID:', firebaseUser.uid);
+
     const bcrypt = await import('bcryptjs');
     const hashedPassword = await bcrypt.hash(defaultPassword, 12);
 
-    // Create new agent user
     const newAgent = await prisma.user.create({
       data: {
+        id: firebaseUser.uid, // Use Firebase UID as database ID
         email,
         displayName: finalDisplayName,
         firstName,
@@ -184,7 +224,7 @@ async function createAgent(req, res) {
         password: hashedPassword,
         role: 'agent',
         isActive: true,
-        isVerified: true // Auto-verify agent accounts
+        isVerified: true
       },
       select: {
         id: true,
@@ -199,13 +239,18 @@ async function createAgent(req, res) {
       }
     });
 
-    console.log('Successfully created agent:', { id: newAgent.id, email: newAgent.email });
+    console.log('Successfully created agent in both Firebase and database:', { 
+      firebaseUid: firebaseUser.uid, 
+      databaseId: newAgent.id,
+      email: newAgent.email 
+    });
 
     return res.status(201).json({
       success: true,
       agent: {
         id: newAgent.id,
         uid: newAgent.id,
+        firebaseUid: firebaseUser.uid,
         email: newAgent.email,
         displayName: newAgent.displayName,
         firstName: newAgent.firstName,
@@ -222,7 +267,10 @@ async function createAgent(req, res) {
           pendingVerifications: 0
         }
       },
-      tempPassword: defaultPassword
+      tempPassword: defaultPassword,
+      loginInstructions: `Agent can now log in to mobile app using:
+Email: ${email}
+Password: ${defaultPassword}`
     });
 
   } catch (error) {
@@ -230,13 +278,23 @@ async function createAgent(req, res) {
     console.error('Error name:', error.name);
     console.error('Error code:', error.code);
     console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
+    
+    // If database creation failed but Firebase user was created, clean up Firebase
+    if (firebaseUser && firebaseUser.uid) {
+      try {
+        console.log('Cleaning up Firebase user due to database error...');
+        await firebaseAuth.deleteUser(firebaseUser.uid);
+        console.log('Firebase user cleanup successful');
+      } catch (cleanupError) {
+        console.error('Failed to cleanup Firebase user:', cleanupError);
+      }
+    }
     
     // Check for Prisma-specific errors
     if (error.code === 'P2002') {
       console.log('Unique constraint failed:', error.meta);
       return res.status(400).json({ 
-        error: 'A user with this email already exists',
+        error: 'A user with this information already exists',
         details: error.message 
       });
     }

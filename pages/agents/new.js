@@ -50,13 +50,19 @@ export default function NewAgent() {
       const result = await response.json()
 
       if (response.ok) {
-        setSuccess(`Agent created successfully! Temporary password: ${result.tempPassword}`)
+        setSuccess(`✅ Agent created successfully!
+        
+📱 Mobile App Login Credentials:
+• Email: ${result.agent.email}
+• Password: ${result.tempPassword}
+
+✨ The agent can now log in to the mobile app immediately!`)
         reset()
         setTimeout(() => {
           router.push('/agents')
-        }, 3000)
+        }, 5000) // Give more time to read the credentials
       } else {
-        setError(result.message || 'Failed to create agent')
+        setError(result.error || result.message || 'Failed to create agent')
       }
     } catch (error) {
       setError('An error occurred. Please try again.')
