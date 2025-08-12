@@ -1,4 +1,4 @@
-import prisma from '../../../lib/prisma';
+import { prisma } from '../../../lib/prisma';
 import { farmerSchema, refereeSchema } from '../../../lib/validation';
 import { authMiddleware } from '../../../lib/authMiddleware';
 import { getSession } from 'next-auth/react';
@@ -69,6 +69,9 @@ async function getFarmers(req, res) {
       status = 'active' 
     } = req.query;
 
+    console.log('Farmers API query params:', { page, limit, search, state, status });
+    console.log('User context:', { isAdmin: req.isAdmin, userUid: req.user?.uid });
+
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     const whereClause = {
@@ -86,6 +89,8 @@ async function getFarmers(req, res) {
         ],
       }),
     };
+
+    console.log('Where clause for farmers query:', JSON.stringify(whereClause, null, 2));
 
     const [farmers, total] = await Promise.all([
       prisma.farmer.findMany({
@@ -108,6 +113,8 @@ async function getFarmers(req, res) {
       }),
       prisma.farmer.count({ where: whereClause }),
     ]);
+
+    console.log(`Found ${farmers.length} farmers out of ${total} total`);
 
     return res.status(200).json({
       farmers,

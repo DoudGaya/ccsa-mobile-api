@@ -22,6 +22,12 @@ export default function Farmers() {
     gender: '',
     status: 'active'
   })
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    pages: 0
+  })
 
   useEffect(() => {
     if (status === 'loading') return
@@ -31,22 +37,43 @@ export default function Farmers() {
     }
     
     fetchFarmers()
-  }, [session, status])
+  }, [session, status, pagination.page])
 
   useEffect(() => {
-    filterFarmers()
-  }, [farmers, searchTerm, filters])
+    // Reset to first page when filters change
+    if (pagination.page !== 1) {
+      setPagination(prev => ({ ...prev, page: 1 }))
+    } else {
+      fetchFarmers()
+    }
+  }, [searchTerm, filters])
 
   const fetchFarmers = async () => {
     try {
       setLoading(true)
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+        status: filters.status,
+      })
+      
+      if (searchTerm) params.append('search', searchTerm)
+      if (filters.state) params.append('state', filters.state)
+      
       // Use the real API first
-      const response = await fetch('/api/farmers?limit=1000') // Use correct API path
+      const response = await fetch(`/api/farmers?${params.toString()}`)
       
       if (response.ok) {
         const data = await response.json()
         console.log('Real farmers data received:', data)
         setFarmers(data.farmers || [])
+        setPagination(prev => ({
+          ...prev,
+          total: data.pagination?.total || 0,
+          pages: data.pagination?.pages || 0
+        }))
       } else {
         console.log('Real API failed, trying fallback...')
         // Only use fallback if real API fails
@@ -55,6 +82,11 @@ export default function Farmers() {
           const fallbackData = await fallbackResponse.json()
           console.log('Fallback farmers data received:', fallbackData)
           setFarmers(fallbackData.farmers || fallbackData)
+          setPagination(prev => ({
+            ...prev,
+            total: (fallbackData.farmers || fallbackData).length,
+            pages: 1
+          }))
         } else {
           console.error('Both APIs failed')
           setFarmers([])
@@ -67,6 +99,11 @@ export default function Farmers() {
         if (response.ok) {
           const data = await response.json()
           setFarmers(data.farmers || data)
+          setPagination(prev => ({
+            ...prev,
+            total: (data.farmers || data).length,
+            pages: 1
+          }))
         }
       } catch (fallbackError) {
         console.error('Fallback API also failed:', fallbackError)
@@ -77,42 +114,12 @@ export default function Farmers() {
     }
   }
 
-  const filterFarmers = () => {
-    // Ensure farmers is always an array
-    const farmersArray = Array.isArray(farmers) ? farmers : []
-    let filtered = farmersArray
-
-    // Text search
-    if (searchTerm) {
-      filtered = filtered.filter(farmer =>
-        farmer.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        farmer.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        farmer.nin.includes(searchTerm) ||
-        farmer.phone.includes(searchTerm) ||
-        (farmer.email && farmer.email.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    }
-
-    // State filter
-    if (filters.state) {
-      filtered = filtered.filter(farmer => farmer.state === filters.state)
-    }
-
-    // Gender filter
-    if (filters.gender) {
-      filtered = filtered.filter(farmer => farmer.gender === filters.gender)
-    }
-
-    // Status filter
-    if (filters.status) {
-      filtered = filtered.filter(farmer => farmer.status === filters.status)
-    }
-
-    setFilteredFarmers(filtered)
-  }
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-GB')
+  }
+
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({ ...prev, page: newPage }))
   }
 
   if (status === 'loading' || loading) {
@@ -144,20 +151,22 @@ export default function Farmers() {
 
           {/* Summary */}
         <div className="bg-white shadow rounded-lg p-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{filteredFarmers.length}</div>
-              <div className="text-sm text-gray-500">Showing Results</div>
+              <div className="text-2xl font-bold text-gray-900">{farmers.length}</div>
+              <div className="text-sm text-gray-500">Current Page</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{(Array.isArray(farmers) ? farmers : []).length}</div>
+              <div className="text-2xl font-bold text-gray-900">{pagination.total}</div>
               <div className="text-sm text-gray-500">Total Farmers</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">
-                {(Array.isArray(farmers) ? farmers : []).filter(f => f.status === 'active').length}
-              </div>
-              <div className="text-sm text-gray-500">Active Farmers</div>
+              <div className="text-2xl font-bold text-gray-900">{pagination.page}</div>
+              <div className="text-sm text-gray-500">Current Page</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{pagination.pages}</div>
+              <div className="text-sm text-gray-500">Total Pages</div>
             </div>
           </div>
         </div>
@@ -233,7 +242,7 @@ export default function Farmers() {
                 </tr>
               </thead>
               <tbody className="table-body">
-                {filteredFarmers.map((farmer) => (
+                {farmers.map((farmer) => (
                   <tr key={farmer.id}>
                     <td className="table-cell">
                       <div className="font-medium text-gray-900">
@@ -279,12 +288,81 @@ export default function Farmers() {
             </table>
           </div>
 
-          {filteredFarmers.length === 0 && (
+          {farmers.length === 0 && !loading && (
             <div className="text-center py-12">
               <p className="text-gray-500">No farmers found matching your criteria.</p>
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {pagination.pages > 1 && (
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page <= 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page >= pagination.pages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing page <span className="font-medium">{pagination.page}</span> of{' '}
+                  <span className="font-medium">{pagination.pages}</span> pages ({pagination.total} total farmers)
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                    disabled={pagination.page <= 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                    const pageNum = Math.max(1, Math.min(pagination.pages - 4, pagination.page - 2)) + i
+                    if (pageNum > pagination.pages) return null
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          pageNum === pagination.page
+                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  })}
+                  
+                  <button
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                    disabled={pagination.page >= pagination.pages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
 
       
       </div>
