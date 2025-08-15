@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../../components/Layout'
+import PolygonMap from '../../components/PolygonMap'
 import Link from 'next/link'
 import {
   MapIcon,
@@ -414,17 +415,35 @@ export default function FarmDetail() {
             {farm.farmPolygon && (
               <div className="bg-white shadow rounded-lg mb-8">
                 <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Farm Polygon</h3>
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <MapIcon className="h-5 w-5 mr-2" />
+                    Farm Polygon
+                  </h3>
                 </div>
                 <div className="px-6 py-4">
-                  <p className="text-sm text-gray-500 mb-3">Polygon coordinates:</p>
-                  <div className="bg-gray-50 rounded p-3 max-h-32 overflow-y-auto">
-                    <pre className="text-xs text-gray-700 whitespace-pre-wrap">
-                      {typeof farm.farmPolygon === 'object' 
-                        ? JSON.stringify(farm.farmPolygon, null, 2)
-                        : farm.farmPolygon
-                      }
-                    </pre>
+                  {/* Visual Polygon Map */}
+                  <div className="mb-6">
+                    <PolygonMap 
+                      polygonData={farm.farmPolygon}
+                      width={500}
+                      height={350}
+                      showCoordinates={true}
+                      className="w-full"
+                      title=""
+                    />
+                  </div>
+                  
+                  {/* Raw Coordinates */}
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-3">Raw Coordinates:</p>
+                    <div className="bg-gray-50 rounded p-3 max-h-32 overflow-y-auto">
+                      <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                        {typeof farm.farmPolygon === 'object' 
+                          ? JSON.stringify(farm.farmPolygon, null, 2)
+                          : farm.farmPolygon
+                        }
+                      </pre>
+                    </div>
                   </div>
                 </div>
               </div>

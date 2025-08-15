@@ -132,16 +132,28 @@ export default function Agents() {
   }
 
   const handleDeleteAgent = async (agentId) => {
-    if (confirm('Are you sure you want to delete this agent? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to delete this agent? This will permanently delete both the database record and Firebase authentication. This action cannot be undone.')) {
       try {
         const response = await fetch(`/api/agents/${agentId}`, {
           method: 'DELETE'
         });
+        
         if (response.ok) {
+          const result = await response.json();
           setAgents(agents.filter(a => a.id !== agentId));
-          alert('Agent deleted successfully');
+          
+          // Show detailed success message
+          let message = `Agent ${result.details.email} deleted successfully from database`;
+          if (result.details.firebaseDeleted) {
+            message += ' and Firebase authentication';
+          } else if (result.warning) {
+            message += ', but Firebase deletion failed or user was not found in Firebase';
+          }
+          alert(message);
+          
         } else {
-          alert('Failed to delete agent');
+          const errorData = await response.json();
+          alert(errorData.error || 'Failed to delete agent');
         }
       } catch (error) {
         console.error('Error deleting agent:', error);

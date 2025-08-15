@@ -2,6 +2,7 @@ import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
 import { authMiddleware } from '../../../lib/authMiddleware';
+import { auth as firebaseAuth } from '../../../lib/firebase-admin';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -221,6 +222,8 @@ async function updateAgent(req, res, id) {
 
 async function deleteAgent(req, res, id) {
   try {
+    console.log(`Starting agent deletion process for ID: ${id}`);
+
     // Check if agent exists
     const agent = await prisma.user.findFirst({
       where: {
@@ -237,25 +240,92 @@ async function deleteAgent(req, res, id) {
     });
 
     if (!agent) {
+      console.log(`Agent not found: ${id}`);
       return res.status(404).json({ error: 'Agent not found' });
     }
 
+    console.log(`Found agent: ${agent.email}, farmers count: ${agent._count.farmers}`);
+
     // Check if agent has registered farmers
     if (agent._count.farmers > 0) {
+      console.log(`Cannot delete agent ${agent.email} - has ${agent._count.farmers} farmers`);
       return res.status(400).json({ 
-        error: 'Cannot delete agent with registered farmers. Please reassign farmers first.' 
+        error: `Cannot delete agent with registered farmers. Please reassign ${agent._count.farmers} farmers first.` 
       });
     }
 
-    // Delete agent
-    await prisma.user.update({
-      where: { id: agent.id },
-      data: { isActive: false } // Soft delete by deactivating
+    // Delete from Firebase first
+    let firebaseDeleted = false;
+    try {
+      console.log(`Attempting to delete Firebase user: ${agent.email}`);
+      
+      // Try to get Firebase user by email first to confirm they exist
+      let firebaseUser = null;
+      try {
+        firebaseUser = await firebaseAuth.getUserByEmail(agent.email);
+        console.log(`Found Firebase user: ${firebaseUser.uid}`);
+      } catch (firebaseError) {
+        if (firebaseError.code === 'auth/user-not-found') {
+          console.log(`Firebase user not found for ${agent.email}, skipping Firebase deletion`);
+        } else {
+          console.error(`Error checking Firebase user ${agent.email}:`, firebaseError);
+          // Continue with database deletion even if Firebase check fails
+        }
+      }
+
+      // Delete Firebase user if they exist
+      if (firebaseUser) {
+        await firebaseAuth.deleteUser(firebaseUser.uid);
+        console.log(`✅ Successfully deleted Firebase user: ${firebaseUser.uid}`);
+        firebaseDeleted = true;
+      }
+
+    } catch (firebaseError) {
+      console.error(`Firebase deletion failed for ${agent.email}:`, firebaseError);
+      // Continue with database deletion even if Firebase deletion fails
+      // We'll note this in the response
+    }
+
+    // Delete from database (hard delete)
+    console.log(`Deleting agent from database: ${agent.id}`);
+    
+    await prisma.user.delete({
+      where: { id: agent.id }
     });
 
-    return res.status(200).json({ message: 'Agent deactivated successfully' });
+    console.log(`✅ Successfully deleted agent from database: ${agent.email}`);
+
+    // Return success response with details
+    const response = {
+      success: true,
+      message: 'Agent deleted successfully',
+      details: {
+        email: agent.email,
+        databaseDeleted: true,
+        firebaseDeleted,
+        hadFarmers: agent._count.farmers > 0
+      }
+    };
+
+    if (!firebaseDeleted && agent.email) {
+      response.warning = 'Agent deleted from database, but Firebase user deletion failed or user was not found in Firebase';
+    }
+
+    return res.status(200).json(response);
+
   } catch (error) {
     console.error('Error deleting agent:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    
+    // Provide more detailed error information
+    if (error.code === 'P2003') {
+      return res.status(400).json({ 
+        error: 'Cannot delete agent due to foreign key constraints. Please ensure all related data is removed first.' 
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: 'Failed to delete agent',
+      details: error.message 
+    });
   }
 }
