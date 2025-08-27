@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import prisma from '../../../lib/prisma'
 import { Logger } from '../../../lib/logger'
+import { getUserPermissions } from '../../../lib/permissions'
 
 export const authOptions = {
   providers: [
@@ -18,10 +19,24 @@ export const authOptions = {
         }
 
         try {
-          // Find user in database
+          // Find user in database with roles and permissions
           const user = await prisma.user.findUnique({
             where: {
               email: credentials.email
+            },
+            include: {
+              userRoles: {
+                include: {
+                  role: {
+                    select: {
+                      id: true,
+                      name: true,
+                      permissions: true,
+                      isSystem: true
+                    }
+                  }
+                }
+              }
             }
           })
 
@@ -36,12 +51,21 @@ export const authOptions = {
             return null
           }
 
+          // Get user permissions from roles
+          const permissions = await getUserPermissions(user.id)
+
           // Return user object (this will be stored in JWT)
           return {
             id: user.id,
             email: user.email,
             name: user.displayName || user.email,
-            role: user.role,
+            role: user.role, // Keep simple role for backwards compatibility
+            roles: user.userRoles.map(ur => ({
+              id: ur.role.id,
+              name: ur.role.name,
+              permissions: ur.role.permissions
+            })),
+            permissions: permissions,
           }
         } catch (error) {
           Logger.error('Auth error:', error.message)
@@ -58,6 +82,8 @@ export const authOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role
+        token.roles = user.roles
+        token.permissions = user.permissions
       }
       return token
     },
@@ -65,6 +91,8 @@ export const authOptions = {
       if (token) {
         session.user.id = token.sub
         session.user.role = token.role
+        session.user.roles = token.roles
+        session.user.permissions = token.permissions
       }
       return session
     }

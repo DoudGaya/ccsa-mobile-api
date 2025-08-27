@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../../components/Layout'
 import Link from 'next/link'
+import { usePermissions, PermissionGate, PERMISSIONS } from '../../components/PermissionProvider'
 import { 
   MagnifyingGlassIcon as SearchIcon,
   EyeIcon,
@@ -13,6 +14,7 @@ import {
 export default function Farmers() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { hasPermission, loading: permissionsLoading } = usePermissions()
   const [farmers, setFarmers] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -20,7 +22,7 @@ export default function Farmers() {
   const [filters, setFilters] = useState({
     state: '',
     gender: '',
-    status: 'active'
+    status: 'all'
   })
   const [pagination, setPagination] = useState({
     page: 1,
@@ -30,14 +32,52 @@ export default function Farmers() {
   })
 
   useEffect(() => {
-    if (status === 'loading') return
+    console.log('Farmers Page - Effect triggered:', { 
+      status, 
+      session: !!session, 
+      permissionsLoading,
+      hasPermission: typeof hasPermission 
+    })
+    
+    if (status === 'loading') {
+      console.log('Farmers Page - Session still loading')
+      return
+    }
+    
+    if (permissionsLoading) {
+      console.log('Farmers Page - Permissions still loading')
+      return
+    }
+    
     if (!session) {
+      console.log('Farmers Page - No session, redirecting to signin')
       router.push('/auth/signin')
       return
     }
     
+    console.log('Farmers Page - Session exists:', {
+      userId: session.user?.id,
+      email: session.user?.email,
+      role: session.user?.role
+    })
+    
+    // Check permissions
+    const hasFarmersRead = hasPermission(PERMISSIONS.FARMERS_READ)
+    console.log('Farmers Page - Permission check:', {
+      farmersReadPermission: PERMISSIONS.FARMERS_READ,
+      hasFarmersRead,
+      hasPermissionFunction: typeof hasPermission
+    })
+    
+    if (!hasFarmersRead) {
+      console.log('Farmers Page - No FARMERS_READ permission, redirecting to dashboard')
+      router.push('/dashboard')
+      return
+    }
+    
+    console.log('Farmers Page - All checks passed, fetching farmers')
     fetchFarmers()
-  }, [session, status, pagination.page])
+  }, [session, status, pagination.page, hasPermission, permissionsLoading])
 
   useEffect(() => {
     // Reset to first page when filters change
@@ -48,6 +88,46 @@ export default function Farmers() {
     }
   }, [searchTerm, filters])
 
+  const updateFarmerStatus = async (farmerId, newStatus) => {
+    try {
+      const response = await fetch('/api/farmers/status', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          farmerId,
+          status: newStatus
+        })
+      })
+
+      if (response.ok) {
+        // Update the local farmers list
+        setFarmers(prevFarmers => 
+          prevFarmers.map(farmer => 
+            farmer.id === farmerId 
+              ? { ...farmer, status: newStatus }
+              : farmer
+          )
+        )
+        
+        // Also update filtered farmers if they exist
+        setFilteredFarmers(prevFiltered =>
+          prevFiltered.map(farmer =>
+            farmer.id === farmerId
+              ? { ...farmer, status: newStatus }
+              : farmer
+          )
+        )
+      } else {
+        throw new Error('Failed to update farmer status')
+      }
+    } catch (error) {
+      console.error('Error updating farmer status:', error)
+      alert('Failed to update farmer status. Please try again.')
+    }
+  }
+
   const fetchFarmers = async () => {
     try {
       setLoading(true)
@@ -56,8 +136,21 @@ export default function Farmers() {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-        status: filters.status,
       })
+      
+      // Only add filters if they have values
+      if (filters.status && filters.status !== 'all') {
+        params.append('status', filters.status)
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm)
+      }
+      if (filters.state) {
+        params.append('state', filters.state)
+      }
+      if (filters.gender) {
+        params.append('gender', filters.gender)
+      }
       
       if (searchTerm) params.append('search', searchTerm)
       if (filters.state) params.append('state', filters.state)
@@ -122,7 +215,7 @@ export default function Farmers() {
     setPagination(prev => ({ ...prev, page: newPage }))
   }
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading' || permissionsLoading || loading) {
     return (
       <Layout title="Farmers">
         <div className="flex justify-center items-center h-64">
@@ -218,9 +311,11 @@ export default function Farmers() {
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="all">All Status</option>
+              <option value="Enrolled">Enrolled</option>
+              <option value="FarmCaptured">Farm Captured</option>
+              <option value="Validated">Validated</option>
+              <option value="Verified">Verified</option>
             </select>
           </div>
         </div>
@@ -256,13 +351,32 @@ export default function Farmers() {
                     <td className="table-cell">{farmer.lga}</td>
                     <td className="table-cell">{formatDate(farmer.createdAt)}</td>
                     <td className="table-cell">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        farmer.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {farmer.status}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          farmer.status === 'Verified'
+                            ? 'bg-green-100 text-green-800'
+                            : farmer.status === 'Validated'
+                            ? 'bg-blue-100 text-blue-800'
+                            : farmer.status === 'FarmCaptured'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {farmer.status}
+                        </span>
+                        {hasPermission(PERMISSIONS.FARMERS_UPDATE) && (
+                          <select
+                            className="text-xs border rounded px-1 py-0.5"
+                            value={farmer.status}
+                            onChange={(e) => updateFarmerStatus(farmer.id, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <option value="Enrolled">Enrolled</option>
+                            <option value="FarmCaptured">Farm Captured</option>
+                            <option value="Validated">Validated</option>
+                            <option value="Verified">Verified</option>
+                          </select>
+                        )}
+                      </div>
                     </td>
                     <td className="table-cell">
                       <div className="flex space-x-2">

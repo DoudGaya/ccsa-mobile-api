@@ -1,0 +1,11 @@
+{
+  "name": "ccsa-certificate-generator",
+  "version": "1.0.0",
+  "description": "PDF Certificate Generator for CCSA Farmers",
+  "dependencies": {
+    "jspdf": "^2.5.1",
+    "qrcode": "^1.5.3",
+    "canvas": "^2.11.2",
+    "jsbarcode": "^3.11.5"
+  }
+}

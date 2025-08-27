@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
-import { prisma } from '../../../lib/prisma';
+import prisma from '../../../lib/prisma';
 import { auth as firebaseAuth } from '../../../lib/firebase-admin';
 
 export default async function handler(req, res) {

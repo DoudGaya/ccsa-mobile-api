@@ -77,6 +77,8 @@ export default function Analytics() {
     pollingUnitDistribution: [],
     registrationTrends: [],
     farmingExperience: [],
+    genderDistribution: [],
+    maritalStatusDistribution: [],
     terrainDistribution: [],
     irrigationDistribution: [],
     ownershipDistribution: []
@@ -96,7 +98,102 @@ export default function Analytics() {
       setLoading(true)
       setError(null)
 
-      // Fetch dashboard data
+      // Fetch analytics data from enhanced API
+      const analyticsResponse = await fetch('/api/analytics')
+      if (analyticsResponse.ok) {
+        const analyticsData = await analyticsResponse.json()
+        setDashboardData(analyticsData.overview)
+        
+        // Transform analytics data to match component expectations
+        const transformedAnalytics = {
+          ageDistribution: analyticsData.demographics.byAge.map(item => ({
+            range: item.ageRange,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarmers) * 100).toFixed(1)
+          })),
+          
+          landSizeDistribution: analyticsData.agriculture.farmSizeDistribution.map(item => ({
+            range: item.sizeRange,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarms) * 100).toFixed(1)
+          })),
+          
+          cropDistribution: analyticsData.agriculture.topCrops.map(item => ({
+            crop: item.crop,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarms) * 100).toFixed(1)
+          })),
+          
+          stateDistribution: analyticsData.locationDistribution.byState.map(item => ({
+            name: item.state,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarmers) * 100).toFixed(1)
+          })),
+          
+          lgaDistribution: analyticsData.locationDistribution.byLocalGovernment.map(item => ({
+            name: item.lga,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarmers) * 100).toFixed(1)
+          })),
+          
+          wardDistribution: analyticsData.locationDistribution.byWard.map(item => ({
+            name: item.ward,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarmers) * 100).toFixed(1)
+          })),
+          
+          pollingUnitDistribution: analyticsData.locationDistribution.byPollingUnit.map(item => ({
+            name: item.pollingUnit,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarms) * 100).toFixed(1)
+          })),
+          
+          registrationTrends: analyticsData.growthTrend.monthlyRegistrations,
+          
+          farmingExperience: analyticsData.agriculture.farmingExperience.map(item => ({
+            level: item.experienceRange,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarms) * 100).toFixed(1)
+          })),
+          
+          genderDistribution: analyticsData.demographics.byGender.map(item => ({
+            gender: item.gender,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarmers) * 100).toFixed(1)
+          })),
+          
+          maritalStatusDistribution: analyticsData.demographics.byMaritalStatus.map(item => ({
+            status: item.status,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarmers) * 100).toFixed(1)
+          })),
+          
+          ownershipDistribution: analyticsData.agriculture.farmOwnership.map(item => ({
+            type: item.ownership,
+            count: item.count,
+            percentage: ((item.count / analyticsData.overview.totalFarms) * 100).toFixed(1)
+          })),
+          
+          // Mock data for fields not yet in API
+          terrainDistribution: [
+            { terrain: 'Upland', count: 0, percentage: '0' },
+            { terrain: 'Lowland', count: 0, percentage: '0' },
+            { terrain: 'Mixed', count: 0, percentage: '0' },
+            { terrain: 'Unknown', count: 0, percentage: '0' }
+          ],
+          irrigationDistribution: [
+            { method: 'Rain-fed', count: 0, percentage: '0' },
+            { method: 'Irrigated', count: 0, percentage: '0' },
+            { method: 'Mixed', count: 0, percentage: '0' },
+            { method: 'Unknown', count: 0, percentage: '0' }
+          ]
+        }
+        
+        setAnalytics(transformedAnalytics)
+        return
+      }
+
+      // Fallback: Fetch dashboard data
       const dashboardResponse = await fetch('/api/dashboard/stats')
       if (dashboardResponse.ok) {
         const dashboardData = await dashboardResponse.json()
@@ -110,88 +207,22 @@ export default function Analytics() {
         })
       }
 
-      // Fetch farmers
+      // Fallback: Fetch farmers
       const farmersResponse = await fetch('/api/farmers')
       if (farmersResponse.ok) {
         const farmersData = await farmersResponse.json()
         setFarmers(farmersData.farmers || [])
       } else {
-        // Mock farmer data when API fails
-        setFarmers([
-          {
-            id: 1,
-            dateOfBirth: '1980-01-01',
-            state: 'Lagos',
-            localGovernment: 'Ikeja',
-            ward: 'Ward 1',
-            pollingUnit: 'PU 001',
-            createdAt: '2024-01-01'
-          },
-          {
-            id: 2,
-            dateOfBirth: '1975-05-15',
-            state: 'Ogun',
-            localGovernment: 'Abeokuta North',
-            ward: 'Ward 2',
-            pollingUnit: 'PU 002',
-            createdAt: '2024-02-01'
-          },
-          {
-            id: 3,
-            dateOfBirth: '1990-08-20',
-            state: 'Lagos',
-            localGovernment: 'Surulere',
-            ward: 'Ward 3',
-            pollingUnit: 'PU 003',
-            createdAt: '2024-03-01'
-          }
-        ])
+        setFarmers([])
       }
 
-      // Fetch farms
+      // Fallback: Fetch farms
       const farmsResponse = await fetch('/api/farms')
       if (farmsResponse.ok) {
         const farmsData = await farmsResponse.json()
         setFarms(farmsData.farms || [])
       } else {
-        // Mock farm data when API fails
-        setFarms([
-          {
-            id: 1,
-            farmSize: '2.5',
-            primaryCrop: 'Maize',
-            farmingExperience: '5',
-            farmTerrain: 'Upland',
-            irrigationMethod: 'Rain-fed',
-            ownershipType: 'Owned'
-          },
-          {
-            id: 2,
-            farmSize: '1.0',
-            primaryCrop: 'Rice',
-            farmingExperience: '10',
-            farmTerrain: 'Lowland',
-            irrigationMethod: 'Irrigated',
-            ownershipType: 'Rented'
-          },
-          {
-            id: 3,
-            farmSize: '3.0',
-            primaryCrop: 'Cassava',
-            farmingExperience: '15',
-            farmTerrain: 'Mixed',
-            irrigationMethod: 'Mixed',
-            ownershipType: 'Family Land'
-          }
-        ])
-      }
-
-      // Fetch analytics if available
-      const analyticsResponse = await fetch('/api/analytics')
-      if (analyticsResponse.ok) {
-        const analyticsData = await analyticsResponse.json()
-        // Note: The current analytics API returns agent-specific data
-        // We'll calculate our own analytics from the fetched data
+        setFarms([])
       }
 
     } catch (err) {
@@ -631,6 +662,32 @@ export default function Analytics() {
             </ResponsiveContainer>
           </div>
 
+          {/* Gender Distribution */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Gender Distribution</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={analytics.genderDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={renderCustomizedLabel}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                  nameKey="gender"
+                >
+                  {analytics.genderDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value, name) => [value, name]} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
           {/* Land Size Distribution */}
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Land Size Distribution</h3>
@@ -641,6 +698,20 @@ export default function Analytics() {
                 <YAxis />
                 <Tooltip formatter={(value) => [value, 'Count']} />
                 <Bar dataKey="count" fill="#10B981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Marital Status Distribution */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Marital Status Distribution</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={analytics.maritalStatusDistribution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="status" />
+                <YAxis />
+                <Tooltip formatter={(value) => [value, 'Count']} />
+                <Bar dataKey="count" fill="#8B5CF6" />
               </BarChart>
             </ResponsiveContainer>
           </div>

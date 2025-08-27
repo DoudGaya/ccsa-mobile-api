@@ -63,13 +63,70 @@ export default async function handler(req, res) {
 
     if (req.method === 'PUT') {
       // Update a farm
-      const updateData = req.body;
+      const updateData = { ...req.body };
+      
+      console.log('Updating farm - received data:', JSON.stringify(updateData, null, 2));
       
       // Remove farmerId from update data to prevent changing farm ownership
       delete updateData.farmerId;
       delete updateData.id;
       delete updateData.createdAt;
       delete updateData.updatedAt;
+
+      // Convert string values to appropriate types for numeric fields
+      if (updateData.farmSize !== undefined) {
+        updateData.farmSize = updateData.farmSize ? parseFloat(updateData.farmSize) : null;
+        if (updateData.farmSize !== null && isNaN(updateData.farmSize)) {
+          return res.status(400).json({ error: 'Invalid farm size value' });
+        }
+      }
+      
+      if (updateData.farmLatitude !== undefined) {
+        updateData.farmLatitude = updateData.farmLatitude ? parseFloat(updateData.farmLatitude) : null;
+        if (updateData.farmLatitude !== null && isNaN(updateData.farmLatitude)) {
+          return res.status(400).json({ error: 'Invalid farm latitude value' });
+        }
+      }
+      
+      if (updateData.farmLongitude !== undefined) {
+        updateData.farmLongitude = updateData.farmLongitude ? parseFloat(updateData.farmLongitude) : null;
+        if (updateData.farmLongitude !== null && isNaN(updateData.farmLongitude)) {
+          return res.status(400).json({ error: 'Invalid farm longitude value' });
+        }
+      }
+      
+      if (updateData.farmElevation !== undefined) {
+        updateData.farmElevation = updateData.farmElevation ? parseFloat(updateData.farmElevation) : null;
+      }
+      
+      if (updateData.soilPH !== undefined) {
+        updateData.soilPH = updateData.soilPH ? parseFloat(updateData.soilPH) : null;
+      }
+      
+      if (updateData.farmArea !== undefined) {
+        updateData.farmArea = updateData.farmArea ? parseFloat(updateData.farmArea) : null;
+      }
+      
+      if (updateData.quantity !== undefined) {
+        updateData.quantity = updateData.quantity ? parseFloat(updateData.quantity) : null;
+      }
+      
+      if (updateData.farmingExperience !== undefined) {
+        updateData.farmingExperience = updateData.farmingExperience ? parseInt(updateData.farmingExperience) : null;
+      }
+      
+      if (updateData.year !== undefined) {
+        updateData.year = updateData.year ? parseInt(updateData.year) : null;
+      }
+      
+      if (updateData.crop !== undefined) {
+        updateData.crop = updateData.crop ? parseFloat(updateData.crop) : null;
+        if (updateData.crop !== null && isNaN(updateData.crop)) {
+          return res.status(400).json({ error: 'Invalid crop value' });
+        }
+      }
+
+      console.log('Converted update data:', JSON.stringify(updateData, null, 2));
 
       const farm = await prisma.farm.update({
         where: { id: farmId },

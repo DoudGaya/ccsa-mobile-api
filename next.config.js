@@ -37,7 +37,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000',
+            value: process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'https://fims.cosmopolitan.edu.ng',
           },
           {
             key: 'Access-Control-Allow-Credentials',

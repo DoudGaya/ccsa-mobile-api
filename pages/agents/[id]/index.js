@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
-import Layout from '../../components/Layout'
+import Layout from '../../../components/Layout'
 import Link from 'next/link'
 import { 
   UserIcon,
@@ -471,12 +471,12 @@ export default function AgentDetails() {
                   <PencilIcon className="h-4 w-4 mr-2" />
                   Edit Agent
                 </Link>
-                <button className="w-full btn-secondary">
+                {/* <button className="w-full btn-secondary">
                   View Farmers
                 </button>
                 <button className="w-full btn-secondary">
                   Generate Report
-                </button>
+                </button> */}
                 <button className={`w-full ${agent.isActive ? 'btn-danger' : 'btn-success'}`}>
                   {agent.isActive ? 'Deactivate' : 'Activate'} Agent
                 </button>

@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../../components/Layout'
 import Link from 'next/link'
+import { PermissionGate, PERMISSIONS } from '../../components/PermissionProvider'
 import { 
   PlusIcon,
   UserIcon,

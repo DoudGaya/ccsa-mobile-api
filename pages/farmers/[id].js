@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../../components/Layout'
 import Link from 'next/link'
+import { usePermissions, PERMISSIONS } from '../../components/PermissionProvider'
 import { 
   UserIcon,
   PhoneIcon,
@@ -20,6 +21,7 @@ import {
 export default function FarmerDetails() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { hasPermission } = usePermissions()
   const { id } = router.query
   const [farmer, setFarmer] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -47,7 +49,9 @@ export default function FarmerDetails() {
   }
 
   const handleDownloadCertificate = () => {
-    window.open(`/certificates/farmer/${id}`, '_blank')
+    // Open certificate in new tab for printing/downloading
+    const certificateUrl = `/certificates/farmer/${id}`
+    window.open(certificateUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes')
   }
 
   const handleViewFarmDetails = () => {
@@ -64,10 +68,18 @@ export default function FarmerDetails() {
       return
     }
 
+    if (status === 'loading') return
+
+    // Check permissions
+    if (!hasPermission(PERMISSIONS.FARMERS_READ)) {
+      router.push('/dashboard')
+      return
+    }
+
     if (id && session) {
       fetchFarmerDetails()
     }
-  }, [id, session, status])
+  }, [id, session, status, hasPermission])
 
   const fetchFarmerDetails = async () => {
     try {
@@ -162,13 +174,35 @@ export default function FarmerDetails() {
                 }`}>
                   {capitalize(farmer.status || 'active')}
                 </span>
-                <button 
-                  onClick={handleGenerateCertificate}
-                  className="btn-primary flex items-center justify-center"
-                >
-                  <DocumentTextIcon className="h-4 w-4 mr-2" />
-                  Generate Certificate
-                </button>
+                
+                {/* Certificate Actions */}
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={handleGenerateCertificate}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 shadow-sm"
+                  >
+                    <DocumentTextIcon className="h-4 w-4 mr-2" />
+                    View Certificate
+                  </button>
+                  
+                  <button 
+                    onClick={handleDownloadCertificate}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
+                  >
+                    <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                    Print/Download
+                  </button>
+                </div>
+                
+                {hasPermission(PERMISSIONS.FARMERS_WRITE) && (
+                  <Link
+                    href={`/farmers/${id}/edit`}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
+                  >
+                    <PencilIcon className="h-4 w-4 mr-2" />
+                    Edit
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -387,33 +421,33 @@ export default function FarmerDetails() {
               </div>
             )}
 
-            {/* Actions */}
+            {/* Quick Actions */}
             <div className="bg-white shadow rounded-lg">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Actions</h2>
+                <h2 className="text-lg font-medium text-gray-900">Certificate Actions</h2>
               </div>
               <div className="px-6 py-4 space-y-3">
                 <button 
+                  onClick={handleGenerateCertificate}
+                  className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 shadow-sm transition-colors"
+                >
+                  <DocumentTextIcon className="h-4 w-4 mr-2" />
+                  View Certificate
+                </button>
+                
+                <button 
                   onClick={handleDownloadCertificate}
-                  className="w-full btn-primary flex items-center justify-center"
+                  className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors"
                 >
                   <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                  Download Certificate
+                  Print/Download Certificate
                 </button>
-                {/* <Link 
-                  href={`/farmers/${id}/edit`}
-                  className="w-full btn-secondary flex items-center justify-center"
-                >
-                  <PencilIcon className="h-4 w-4 mr-2" />
-                  Edit Information
-                </Link> */}
-                {/* <button 
-                  onClick={handleViewFarmDetails}
-                  className="w-full btn-secondary flex items-center justify-center"
-                >
-                  <EyeIcon className="h-4 w-4 mr-2" />
-                  View Farm Details
-                </button> */}
+                
+                <div className="pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-500 text-center">
+                    Certificate No: CCSA/{new Date(farmer.createdAt).getFullYear()}/{String(farmer.id).replace(/[^0-9]/g, '').slice(-6).padStart(6, '0')}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

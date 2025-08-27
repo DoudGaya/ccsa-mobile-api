@@ -225,7 +225,7 @@ export default function EditAgent() {
                     <input
                       {...register('displayName', { required: 'Display name is required' })}
                       type="text"
-                      className="input-field pl-10"
+                      className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
                       placeholder="Enter display name"
                     />
                   </div>
@@ -251,7 +251,7 @@ export default function EditAgent() {
                         }
                       })}
                       type="email"
-                      className="input-field pl-10"
+                      className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
                       placeholder="Enter email address"
                     />
                   </div>
@@ -267,7 +267,7 @@ export default function EditAgent() {
                   <input
                     {...register('firstName', { required: 'First name is required' })}
                     type="text"
-                    className="mt-1 input-field"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
                     placeholder="Enter first name"
                   />
                   {errors.firstName && (
@@ -282,7 +282,7 @@ export default function EditAgent() {
                   <input
                     {...register('lastName', { required: 'Last name is required' })}
                     type="text"
-                    className="mt-1 input-field"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
                     placeholder="Enter last name"
                   />
                   {errors.lastName && (
@@ -306,7 +306,7 @@ export default function EditAgent() {
                         }
                       })}
                       type="tel"
-                      className="input-field pl-10"
+                      className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
                       placeholder="08012345678"
                     />
                   </div>
@@ -332,7 +332,7 @@ export default function EditAgent() {
                   <input
                     {...register('state')}
                     type="text"
-                    className="mt-1 input-field"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
                     placeholder="Enter state"
                   />
                 </div>
@@ -344,7 +344,7 @@ export default function EditAgent() {
                   <input
                     {...register('lga')}
                     type="text"
-                    className="mt-1 input-field"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
                     placeholder="Enter LGA"
                   />
                 </div>

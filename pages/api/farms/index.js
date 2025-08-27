@@ -1,6 +1,7 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from 'next-auth/react';
+import { updateFarmerStatusByFarms } from '../../../lib/farmerStatusUtils';
 
 const prisma = new PrismaClient();
 
@@ -94,6 +95,8 @@ export default async function handler(req, res) {
     
     if (req.method === 'POST') {
       // Create a new farm
+      console.log('Creating new farm - received data:', JSON.stringify(req.body, null, 2));
+      
       const {
         farmerId,
         farmSize,
@@ -127,6 +130,40 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Farmer ID is required' });
       }
 
+      // Convert string values to appropriate types
+      const parsedFarmSize = farmSize ? parseFloat(farmSize) : null;
+      const parsedFarmLatitude = farmLatitude ? parseFloat(farmLatitude) : null;
+      const parsedFarmLongitude = farmLongitude ? parseFloat(farmLongitude) : null;
+      const parsedFarmElevation = farmElevation ? parseFloat(farmElevation) : null;
+      const parsedSoilPH = soilPH ? parseFloat(soilPH) : null;
+      const parsedFarmArea = farmArea ? parseFloat(farmArea) : null;
+      const parsedQuantity = quantity ? parseFloat(quantity) : null;
+      const parsedCrop = crop ? parseFloat(crop) : null;
+      const parsedFarmingExperience = farmingExperience ? parseInt(farmingExperience) : null;
+      const parsedYear = year ? parseInt(year) : null;
+
+      // Validate parsed numbers
+      if (farmSize && isNaN(parsedFarmSize)) {
+        return res.status(400).json({ error: 'Invalid farm size value' });
+      }
+      if (farmLatitude && isNaN(parsedFarmLatitude)) {
+        return res.status(400).json({ error: 'Invalid farm latitude value' });
+      }
+      if (farmLongitude && isNaN(parsedFarmLongitude)) {
+        return res.status(400).json({ error: 'Invalid farm longitude value' });
+      }
+      if (crop && isNaN(parsedCrop)) {
+        return res.status(400).json({ error: 'Invalid crop value' });
+      }
+
+      console.log('Parsed numeric values:', {
+        farmSize: `${farmSize} -> ${parsedFarmSize}`,
+        farmLatitude: `${farmLatitude} -> ${parsedFarmLatitude}`,
+        farmLongitude: `${farmLongitude} -> ${parsedFarmLongitude}`,
+        farmingExperience: `${farmingExperience} -> ${parsedFarmingExperience}`,
+        crop: `${crop} -> ${parsedCrop}`,
+      });
+
       // Verify farmer exists
       const farmer = await prisma.farmer.findUnique({
         where: { id: farmerId }
@@ -139,7 +176,7 @@ export default async function handler(req, res) {
       const farm = await prisma.farm.create({
         data: {
           farmerId,
-          farmSize,
+          farmSize: parsedFarmSize,
           primaryCrop,
           produceCategory,
           farmOwnership,
@@ -149,21 +186,21 @@ export default async function handler(req, res) {
           farmWard,
           farmPollingUnit,
           secondaryCrop,
-          farmingExperience,
-          farmLatitude,
-          farmLongitude,
+          farmingExperience: parsedFarmingExperience,
+          farmLatitude: parsedFarmLatitude,
+          farmLongitude: parsedFarmLongitude,
           farmPolygon,
           soilType,
-          soilPH,
+          soilPH: parsedSoilPH,
           soilFertility,
           farmCoordinates,
           coordinateSystem,
-          farmArea,
-          farmElevation,
-          year,
+          farmArea: parsedFarmArea,
+          farmElevation: parsedFarmElevation,
+          year: parsedYear,
           yieldSeason,
-          crop,
-          quantity,
+          crop: parsedCrop,
+          quantity: parsedQuantity,
         },
         include: {
           farmer: {
@@ -176,6 +213,14 @@ export default async function handler(req, res) {
           }
         }
       });
+
+      // Automatically update farmer status when farm is added
+      try {
+        await updateFarmerStatusByFarms(farmerId);
+      } catch (statusError) {
+        console.error('Error updating farmer status after farm creation:', statusError);
+        // Don't fail the farm creation if status update fails
+      }
 
       return res.status(201).json({ farm });
     }

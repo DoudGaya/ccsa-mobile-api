@@ -2,14 +2,21 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
-import {
-  UserPlusIcon,
-  TrashIcon,
-  PencilIcon,
+import { usePermissions, PermissionGate, PERMISSIONS } from '../components/PermissionProvider'
+import { 
+  UserCircleIcon,
+  KeyIcon,
+  BellIcon,
   ShieldCheckIcon,
   CogIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
   UserGroupIcon,
-  ExclamationTriangleIcon
+  UserPlusIcon,
+  TrashIcon,
+  PencilIcon
 } from '@heroicons/react/24/outline'
 
 export default function Settings() {

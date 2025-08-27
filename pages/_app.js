@@ -1,4 +1,5 @@
 import { SessionProvider } from 'next-auth/react'
+import PermissionProvider from '../components/PermissionProvider'
 import '../styles/globals.css'
 
 export default function App({ 
@@ -7,7 +8,9 @@ export default function App({
 }) {
   return (
     <SessionProvider session={session}>
-      <Component {...pageProps} />
+      <PermissionProvider>
+        <Component {...pageProps} />
+      </PermissionProvider>
     </SessionProvider>
   )
 }

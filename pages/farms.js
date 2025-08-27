@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
 import Link from 'next/link'
+import { calculateMissingFarmSize } from '../lib/farmCalculations'
 import {
   MapIcon,
   EyeIcon,
@@ -54,10 +55,14 @@ export default function Farms() {
       
       const data = await response.json()
       const farmsData = data.farms || []
-      setFarms(farmsData)
+      
+      // Calculate missing farm sizes using the utility
+      const farmsWithCalculatedSizes = farmsData.map(farm => calculateMissingFarmSize(farm))
+      
+      setFarms(farmsWithCalculatedSizes)
       
       // Calculate stats
-      calculateStats(farmsData)
+      calculateStats(farmsWithCalculatedSizes)
     } catch (err) {
       console.error('Error fetching farms:', err)
       setError(err.message)
@@ -367,11 +372,11 @@ export default function Farms() {
                           Farm Size (ha)
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Ownership
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Coordinates
                         </th>
+                        {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Experience (years)
+                        </th> */}
                         <th className="relative px-6 py-3">
                           <span className="sr-only">Actions</span>
                         </th>
@@ -410,10 +415,16 @@ export default function Farms() {
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {farm.farmSize || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {farm.farmOwnership || 'N/A'}
+                            <div className="flex items-center">
+                              <span className={farm.calculatedSize ? 'text-blue-600' : 'text-gray-900'}>
+                                {farm.farmSize ? parseFloat(farm.farmSize).toFixed(2) : 'N/A'}
+                              </span>
+                              {farm.calculatedSize && (
+                                <span className="ml-1 text-xs text-blue-500" title="Calculated from polygon">
+                                  *
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {farm.farmLatitude && farm.farmLongitude ? (

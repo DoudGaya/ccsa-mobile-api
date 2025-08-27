@@ -1,4 +1,4 @@
-import { prisma } from '../../../lib/prisma';
+import prisma from '../../../lib/prisma';
 import { farmerSchema, refereeSchema } from '../../../lib/validation';
 import { authMiddleware } from '../../../lib/authMiddleware';
 import { getSession } from 'next-auth/react';
@@ -99,6 +99,14 @@ async function getFarmers(req, res) {
           referees: true,
           certificates: true,
           farms: true,
+          cluster: {
+            select: {
+              id: true,
+              title: true,
+              clusterLeadFirstName: true,
+              clusterLeadLastName: true,
+            },
+          },
           agent: {
             select: {
               id: true,
