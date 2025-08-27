@@ -215,7 +215,7 @@ export default function Farms() {
 
        <div className=' flex flex-col space-y-4'>
          {/* Enhanced Summary Section */}
-        <div className="grid grid-cols-1 bg-green-400 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Stats */}
           <div className="lg:col-span-2 bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Farm Overview</h3>
