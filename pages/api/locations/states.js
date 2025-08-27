@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      data: states
+      states: states
     });
   } catch (error) {
     console.error('Error fetching states:', error);
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      data: fallbackStates,
+      states: fallbackStates,
       note: 'Using fallback data due to database error'
     });
   }

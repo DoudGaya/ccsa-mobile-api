@@ -1,5 +1,5 @@
 import { authMiddleware } from '../../../lib/auth';
-import { Logger } from '../../../lib/logger';
+import ProductionLogger from '../../../lib/productionLogger';
 
 // NIN API configuration
 const NIN_API_BASE_URL = process.env.NIN_API_BASE_URL;
@@ -10,7 +10,7 @@ async function lookupNINFromAPI(nin) {
   try {
     const url = `${NIN_API_BASE_URL}/api/lookup/nin?op=level-4&nin=${nin}`;
     
-    Logger.debug(`Making NIN API request for NIN: ****${nin.slice(-4)}`);
+    ProductionLogger.debug(`Making NIN API request for NIN: ****${nin.slice(-4)}`);
     
     const response = await fetch(url, {
       method: "GET",
@@ -26,7 +26,7 @@ async function lookupNINFromAPI(nin) {
 
     const data = await response.json();
     
-    Logger.debug("NIN Verification Response status:", data.status);
+    ProductionLogger.debug("NIN Verification Response status:", data.status);
     
     // Check if the API returned success
     if (data.status === 200 && data.data) {
@@ -35,7 +35,7 @@ async function lookupNINFromAPI(nin) {
       throw new Error(data.message || 'NIN not found or invalid');
     }
   } catch (error) {
-    Logger.error('NIN API lookup error:', error.message);
+    ProductionLogger.error('NIN API lookup error:', error.message);
     throw error;
   }
 }
@@ -72,7 +72,7 @@ export default authMiddleware(async function handler(req, res) {
       try {
         ninData = await lookupNINFromAPI(nin);
       } catch (error) {
-        Logger.error('External NIN API failed:', error.message);
+        ProductionLogger.error('External NIN API failed:', error.message);
         
         return res.status(503).json({ 
           error: 'Service unavailable',
@@ -81,7 +81,7 @@ export default authMiddleware(async function handler(req, res) {
         });
       }
     } else {
-      Logger.warn('NIN API credentials not configured');
+      ProductionLogger.warn('NIN API credentials not configured');
       return res.status(503).json({ 
         error: 'Service not configured',
         status: 503,
@@ -95,7 +95,7 @@ export default authMiddleware(async function handler(req, res) {
       data: ninData,
     });
   } catch (error) {
-    Logger.error('Error in NIN lookup handler:', error.message);
+    ProductionLogger.error('Error in NIN lookup handler:', error.message);
     return res.status(500).json({ 
       error: 'Internal server error',
       status: 500,

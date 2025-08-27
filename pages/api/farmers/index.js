@@ -3,6 +3,7 @@ import { farmerSchema, refereeSchema } from '../../../lib/validation';
 import { authMiddleware } from '../../../lib/authMiddleware';
 import { getSession } from 'next-auth/react';
 import { asyncHandler, corsMiddleware } from '../../../lib/errorHandler';
+import ProductionLogger from '../../../lib/productionLogger';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -69,8 +70,8 @@ async function getFarmers(req, res) {
       status = 'active' 
     } = req.query;
 
-    console.log('Farmers API query params:', { page, limit, search, state, status });
-    console.log('User context:', { isAdmin: req.isAdmin, userUid: req.user?.uid });
+    ProductionLogger.debug('Farmers API query params', { page, limit, search, state, status });
+    ProductionLogger.debug('User context', { isAdmin: req.isAdmin, userUid: req.user?.uid });
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -90,7 +91,7 @@ async function getFarmers(req, res) {
       }),
     };
 
-    console.log('Where clause for farmers query:', JSON.stringify(whereClause, null, 2));
+    ProductionLogger.debug('Where clause for farmers query', whereClause);
 
     const [farmers, total] = await Promise.all([
       prisma.farmer.findMany({
@@ -122,7 +123,7 @@ async function getFarmers(req, res) {
       prisma.farmer.count({ where: whereClause }),
     ]);
 
-    console.log(`Found ${farmers.length} farmers out of ${total} total`);
+    ProductionLogger.info(`Found ${farmers.length} farmers out of ${total} total`);
 
     return res.status(200).json({
       farmers,
@@ -222,18 +223,18 @@ async function createFarmer(req, res) {
     const parseDate = (dateString) => {
       if (!dateString) return null;
       
-      console.log(`Parsing date: "${dateString}"`);
+      ProductionLogger.debug(`Parsing date: "${dateString}"`);
       
       // Try to parse the date string
       const date = new Date(dateString);
       
       // Check if the date is valid
       if (isNaN(date.getTime())) {
-        console.warn(`Invalid date format: ${dateString}`);
+        ProductionLogger.warn(`Invalid date format: ${dateString}`);
         return null;
       }
       
-      console.log(`Successfully parsed date: ${dateString} -> ${date.toISOString()}`);
+      ProductionLogger.debug(`Successfully parsed date: ${dateString} -> ${date.toISOString()}`);
       return date;
     };
 
@@ -319,8 +320,8 @@ async function createFarmer(req, res) {
     }
 
     // Create farmer with referees
-    console.log('Creating farmer with agentId:', req.user.uid);
-    console.log('Farmer data preview:', {
+    ProductionLogger.debug('Creating farmer with agentId', req.user.uid);
+    ProductionLogger.debug('Farmer data preview', {
       nin: farmerData.nin,
       firstName: farmerData.firstName,
       lastName: farmerData.lastName,

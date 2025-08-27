@@ -2,7 +2,7 @@ import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import prisma from '../../../lib/prisma'
-import { Logger } from '../../../lib/logger'
+import ProductionLogger from '../../../lib/productionLogger'
 import { getUserPermissions } from '../../../lib/permissions'
 
 export const authOptions = {
@@ -68,7 +68,7 @@ export const authOptions = {
             permissions: permissions,
           }
         } catch (error) {
-          Logger.error('Auth error:', error.message)
+          ProductionLogger.error('Auth error:', error.message);
           return null
         }
       }

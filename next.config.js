@@ -1,19 +1,33 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Production optimizations
   poweredByHeader: false,
   compress: true,
   
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb'
-    },
-  },
-  
-  // Configure for proper NextAuth functionality in production
+  // Security headers
   async headers() {
     return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
+          }
+        ]
+      },
       {
         source: '/api/:path*',
         headers: [
@@ -29,31 +43,12 @@ const nextConfig = {
             key: 'Access-Control-Allow-Headers',
             value: 'Content-Type, Authorization',
           },
-        ],
-      },
-      // Specific headers for NextAuth
-      {
-        source: '/api/auth/:path*',
-        headers: [
           {
-            key: 'Access-Control-Allow-Origin',
-            value: process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'https://fims.cosmopolitan.edu.ng',
-          },
-          {
-            key: 'Access-Control-Allow-Credentials',
-            value: 'true',
-          },
+            key: 'Cache-Control',
+            value: 'no-store, max-age=0'
+          }
         ],
-      },
-    ];
-  },
-  
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: '/api/:path*',
-      },
+      }
     ];
   },
   
@@ -67,7 +62,13 @@ const nextConfig = {
         exclude: ['error', 'warn']
       }
     }
-  })
+  }),
+  
+  // Image optimization
+  images: {
+    domains: ['localhost'],
+    formats: ['image/webp', 'image/avif'],
+  }
 };
 
 module.exports = nextConfig;

@@ -25,6 +25,18 @@ export default function Farms() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedState, setSelectedState] = useState('')
   const [selectedCrop, setSelectedCrop] = useState('')
+  const [analytics, setAnalytics] = useState({
+    overview: {
+      totalFarms: 0,
+      totalHectares: 0,
+      averageFarmSize: 0,
+      totalFarmers: 0
+    },
+    topStates: [],
+    topLGAs: [],
+    topPrimaryCrops: [],
+    farmSizeDistribution: []
+  })
   
   // Stats
   const [stats, setStats] = useState({
@@ -41,6 +53,7 @@ export default function Farms() {
       return
     }
     fetchFarms()
+    fetchAnalytics()
   }, [session, status, router])
 
   const fetchFarms = async () => {
@@ -95,6 +108,18 @@ export default function Farms() {
       avgLandSize: Math.round(avgLandSize * 100) / 100,
       topCrops
     })
+  }
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await fetch('/api/farms/analytics')
+      if (response.ok) {
+        const data = await response.json()
+        setAnalytics(data.analytics)
+      }
+    } catch (error) {
+      console.error('Error fetching farm analytics:', error)
+    }
   }
 
   // Filter farms based on search and filters
@@ -188,74 +213,121 @@ export default function Farms() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <MapIcon className="h-6 w-6 text-gray-400" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Farms</dt>
-                    <dd className="text-lg font-medium text-gray-900">{stats.totalFarms}</dd>
-                  </dl>
-                </div>
+       <div className=' flex flex-col space-y-4'>
+         {/* Enhanced Summary Section */}
+        <div className="grid grid-cols-1 bg-green-400 lg:grid-cols-3 gap-6">
+          {/* Main Stats */}
+          <div className="lg:col-span-2 bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Farm Overview</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600">{analytics.overview.totalFarms.toLocaleString()}</div>
+                <div className="text-sm text-gray-500">Total Farms</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600">{analytics.overview.totalHectares.toLocaleString()}</div>
+                <div className="text-sm text-gray-500">Total Hectares</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-600">{analytics.overview.averageFarmSize}</div>
+                <div className="text-sm text-gray-500">Avg Size (ha)</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-orange-600">{analytics.overview.totalFarmers.toLocaleString()}</div>
+                <div className="text-sm text-gray-500">Unique Farmers</div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <ChartBarIcon className="h-6 w-6 text-gray-400" />
+          {/* Top Primary Crops */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Primary Crops</h3>
+            <div className="space-y-3">
+              {analytics.topPrimaryCrops.slice(0, 5).map((crop, index) => (
+                <div key={crop.crop} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${
+                      index === 0 ? 'bg-green-500' :
+                      index === 1 ? 'bg-blue-500' :
+                      index === 2 ? 'bg-yellow-500' :
+                      index === 3 ? 'bg-purple-500' : 'bg-gray-500'
+                    }`}></div>
+                    <span className="text-sm font-medium text-gray-900">{crop.crop}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-gray-900">{crop.farmCount}</div>
+                    <div className="text-xs text-gray-500">{crop.totalHectares}ha</div>
+                  </div>
                 </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Land (Hectares)</dt>
-                    <dd className="text-lg font-medium text-gray-900">{stats.totalLandSize}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <MapPinIcon className="h-6 w-6 text-gray-400" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Avg Land Size</dt>
-                    <dd className="text-lg font-medium text-gray-900">{stats.avgLandSize} ha</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <FunnelIcon className="h-6 w-6 text-gray-400" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Top Crop</dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {stats.topCrops[0]?.crop || 'N/A'}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
+
+        {/* Regional Distribution */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top States */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Top States by Farm Count</h3>
+            <div className="">
+              {analytics.topStates.slice(0, 10).map((state, index) => (
+                <div key={state.state} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-xs font-bold text-blue-600">{index + 1}</span>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 capitalize">{state.state}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-gray-900">{state.farmCount.toLocaleString()}</div>
+                    <div className="text-xs text-gray-500">{state.totalHectares}ha ({state.percentage}%)</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top LGAs */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Local Governments</h3>
+            <div className="">
+              {analytics.topLGAs.slice(0, 10).map((lga, index) => (
+                <div key={`${lga.lga}-${lga.state}`} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-xs font-bold text-green-600">{index + 1}</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 capitalize">{lga.lga}</div>
+                      <div className="text-xs text-gray-500 capitalize">{lga.state} State</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-gray-900">{lga.farmCount.toLocaleString()}</div>
+                    <div className="text-xs text-gray-500">{lga.totalHectares}ha</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Farm Size Distribution */}
+        {analytics.farmSizeDistribution.length > 0 && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Farm Size Distribution</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {analytics.farmSizeDistribution.map((range) => (
+                <div key={range.range} className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600">{range.count}</div>
+                  <div className="text-sm text-gray-600">{range.range}</div>
+                  <div className="text-xs text-gray-500">{range.percentage}% of farms</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+       </div>
 
         {/* Filters */}
         <div className="mt-8 bg-white shadow rounded-lg p-6">
@@ -467,24 +539,6 @@ export default function Farms() {
             </div>
           </div>
         </div>
-
-        {/* Top Crops Summary */}
-        {stats.topCrops.length > 0 && (
-          <div className="mt-8 bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Crops Distribution</h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {stats.topCrops.map((crop, index) => (
-                <div key={crop.crop} className="bg-gray-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">{crop.count}</div>
-                  <div className="text-sm text-gray-600">{crop.crop}</div>
-                  <div className="text-xs text-gray-500">
-                    {((crop.count / stats.totalFarms) * 100).toFixed(1)}% of farms
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </Layout>
   )

@@ -94,8 +94,8 @@ export default function FarmerDetails() {
         const data = await response.json()
         console.log('Real farmer details received from database:', data)
         
-        // The API returns farmer data directly
-        setFarmer(data)
+        // The API returns farmer data in farmer property
+        setFarmer(data.farmer || data)
       } else {
         // If real API fails, show error instead of using fallback
         const errorData = await response.json().catch(() => ({}))
@@ -252,8 +252,29 @@ export default function FarmerDetails() {
                     <span className="text-sm text-gray-900">{capitalize(farmer.gender)}</span>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Marital Status</label>
-                    <span className="text-sm text-gray-900">{capitalize(farmer.maritalStatus)}</span>
+                    <label className="block text-sm font-medium text-gray-700">WhatsApp Number</label>
+                    <div className="mt-1 flex items-center">
+                      <PhoneIcon className="h-5 w-5 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-900">{farmer.whatsAppNumber || 'Not provided'}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Employment Status</label>
+                    <span className="text-sm text-gray-900">{capitalize(farmer.employmentStatus) || 'Not provided'}</span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Registration Status</label>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      farmer.status === 'Verified'
+                        ? 'bg-green-100 text-green-800'
+                        : farmer.status === 'Validated'
+                        ? 'bg-blue-100 text-blue-800'
+                        : farmer.status === 'FarmCaptured'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {farmer.status || 'Enrolled'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -392,7 +413,55 @@ export default function FarmerDetails() {
             </div>
 
             {/* Farm Information */}
-            {farmer.farmLocation && (
+            {(farmer.farms && farmer.farms.length > 0) ? (
+              <div className="bg-white shadow rounded-lg">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-medium text-gray-900">Farm Information</h2>
+                    <button
+                      onClick={handleViewFarmDetails}
+                      className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    >
+                      <EyeIcon className="h-4 w-4 mr-1" />
+                      View Details
+                    </button>
+                  </div>
+                </div>
+                <div className="px-6 py-4 space-y-4">
+                  {farmer.farms.map((farm, index) => (
+                    <div key={farm.id} className="border rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-3">Farm #{index + 1}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium">Farm Size:</span> {farm.farmSize ? `${farm.farmSize} hectares` : 'Not specified'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Primary Crop:</span> {capitalize(farm.primaryCrop) || 'Not specified'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Secondary Crop:</span> {capitalize(farm.secondaryCrop) || 'Not specified'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Farm Ownership:</span> {capitalize(farm.farmOwnership) || 'Not specified'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Farm State:</span> {capitalize(farm.farmState) || 'Not specified'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Farm LGA:</span> {capitalize(farm.farmLocalGovernment) || 'Not specified'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Farm Ward:</span> {capitalize(farm.farmWard) || 'Not specified'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Farming Season:</span> {capitalize(farm.farmingSeason) || 'Not specified'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : farmer.farmLocation && (
               <div className="bg-white shadow rounded-lg">
                 <div className="px-6 py-4 border-b border-gray-200">
                   <h2 className="text-lg font-medium text-gray-900">Farm Information</h2>

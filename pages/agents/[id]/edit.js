@@ -3,12 +3,65 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../../../components/Layout'
 import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import LocationSelect from '../../../components/LocationSelect'
+import { nigerianBanks } from '../../../data/nigerianBanks'
 import { 
   UserIcon,
   PhoneIcon,
   EnvelopeIcon as MailIcon,
+  MapPinIcon,
+  BanknotesIcon,
+  BriefcaseIcon,
+  CalendarIcon,
+  EyeIcon,
+  EyeSlashIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
+
+// Form validation schema (simplified version of new agent schema)
+const editAgentSchema = z.object({
+  // Personal Information
+  nin: z.string().optional(),
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  middleName: z.string().optional(),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  dateOfBirth: z.string().optional(),
+  gender: z.enum(['MALE', 'FEMALE']).optional(),
+  maritalStatus: z.enum(['single', 'married', 'divorced', 'widowed']).optional(),
+  
+  // Contact & Location
+  phone: z.string().optional(),
+  email: z.string().email('Invalid email address'),
+  whatsAppNumber: z.string().optional(),
+  alternativePhone: z.string().optional(),
+  address: z.string().optional(),
+  state: z.string().optional(),
+  localGovernment: z.string().optional(),
+  ward: z.string().optional(),
+  pollingUnit: z.string().optional(),
+  
+  // Bank Information
+  bankName: z.string().optional(),
+  accountName: z.string().optional(),
+  accountNumber: z.string().optional(),
+  bvn: z.string().optional(),
+  
+  // Employment
+  employmentStatus: z.enum(['employed', 'unemployed', 'self-employed', 'student', 'retired']).optional(),
+  startDate: z.string().optional(),
+  salary: z.coerce.number().optional(),
+  commissionRate: z.coerce.number().min(0).max(100).optional(),
+  assignedState: z.string().optional(),
+  assignedLGA: z.string().optional(),
+  assignedWard: z.string().optional(),
+  assignedPollingUnit: z.string().optional(),
+  
+  // System
+  displayName: z.string().min(2, 'Display name must be at least 2 characters'),
+  isActive: z.boolean().optional(),
+})
 
 export default function EditAgent() {
   const { data: session, status } = useSession()
@@ -19,8 +72,26 @@ export default function EditAgent() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+  const [showPasswords, setShowPasswords] = useState({
+    bvn: false
+  })
 
-  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm()
+  const { register, handleSubmit, watch, formState: { errors }, reset, setValue } = useForm({
+    resolver: zodResolver(editAgentSchema),
+    mode: 'onChange'
+  })
+
+  // Watch location fields for cascading selects
+  const selectedState = watch('state')
+  const selectedLGA = watch('localGovernment')
+  const selectedWard = watch('ward')
+
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }))
+  }
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -51,12 +122,34 @@ export default function EditAgent() {
         
         // Set form values
         setValue('displayName', agentData.displayName || '')
+        setValue('nin', agentData.nin || '')
         setValue('firstName', agentData.firstName || '')
+        setValue('middleName', agentData.middleName || '')
         setValue('lastName', agentData.lastName || '')
+        setValue('dateOfBirth', agentData.dateOfBirth ? agentData.dateOfBirth.split('T')[0] : '')
+        setValue('gender', agentData.gender || '')
+        setValue('maritalStatus', agentData.maritalStatus || '')
         setValue('email', agentData.email || '')
-        setValue('phoneNumber', agentData.phone || agentData.phoneNumber || '')
+        setValue('phone', agentData.phone || agentData.phoneNumber || '')
+        setValue('whatsAppNumber', agentData.whatsAppNumber || '')
+        setValue('alternativePhone', agentData.alternativePhone || '')
+        setValue('address', agentData.address || '')
         setValue('state', agentData.state || '')
-        setValue('lga', agentData.lga || '')
+        setValue('localGovernment', agentData.lga || agentData.localGovernment || '')
+        setValue('ward', agentData.ward || '')
+        setValue('pollingUnit', agentData.pollingUnit || '')
+        setValue('bankName', agentData.bankName || '')
+        setValue('accountName', agentData.accountName || '')
+        setValue('accountNumber', agentData.accountNumber || '')
+        setValue('bvn', agentData.bvn || '')
+        setValue('employmentStatus', agentData.employmentStatus || '')
+        setValue('startDate', agentData.startDate ? agentData.startDate.split('T')[0] : '')
+        setValue('salary', agentData.salary || '')
+        setValue('commissionRate', agentData.commissionRate || '')
+        setValue('assignedState', agentData.assignedState || '')
+        setValue('assignedLGA', agentData.assignedLGA || '')
+        setValue('assignedWard', agentData.assignedWard || '')
+        setValue('assignedPollingUnit', agentData.assignedPollingUnit || '')
         setValue('isActive', agentData.isActive !== false)
       } else {
         throw new Error('Failed to fetch agent details')
@@ -71,12 +164,34 @@ export default function EditAgent() {
           
           // Set form values
           setValue('displayName', data.displayName || '')
+          setValue('nin', data.nin || '')
           setValue('firstName', data.firstName || '')
+          setValue('middleName', data.middleName || '')
           setValue('lastName', data.lastName || '')
+          setValue('dateOfBirth', data.dateOfBirth ? data.dateOfBirth.split('T')[0] : '')
+          setValue('gender', data.gender || '')
+          setValue('maritalStatus', data.maritalStatus || '')
           setValue('email', data.email || '')
-          setValue('phoneNumber', data.phone || data.phoneNumber || '')
+          setValue('phone', data.phone || data.phoneNumber || '')
+          setValue('whatsAppNumber', data.whatsAppNumber || '')
+          setValue('alternativePhone', data.alternativePhone || '')
+          setValue('address', data.address || '')
           setValue('state', data.state || '')
-          setValue('lga', data.lga || '')
+          setValue('localGovernment', data.lga || data.localGovernment || '')
+          setValue('ward', data.ward || '')
+          setValue('pollingUnit', data.pollingUnit || '')
+          setValue('bankName', data.bankName || '')
+          setValue('accountName', data.accountName || '')
+          setValue('accountNumber', data.accountNumber || '')
+          setValue('bvn', data.bvn || '')
+          setValue('employmentStatus', data.employmentStatus || '')
+          setValue('startDate', data.startDate ? data.startDate.split('T')[0] : '')
+          setValue('salary', data.salary || '')
+          setValue('commissionRate', data.commissionRate || '')
+          setValue('assignedState', data.assignedState || '')
+          setValue('assignedLGA', data.assignedLGA || '')
+          setValue('assignedWard', data.assignedWard || '')
+          setValue('assignedPollingUnit', data.assignedPollingUnit || '')
           setValue('isActive', data.isActive !== false)
         } else {
           throw new Error('Both APIs failed')
@@ -216,14 +331,14 @@ export default function EditAgent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
-                    Display Name
+                    Display Name *
                   </label>
                   <div className="mt-1 relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <UserIcon className="h-5 w-5 text-gray-400" />
                     </div>
                     <input
-                      {...register('displayName', { required: 'Display name is required' })}
+                      {...register('displayName')}
                       type="text"
                       className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
                       placeholder="Enter display name"
@@ -235,21 +350,129 @@ export default function EditAgent() {
                 </div>
 
                 <div>
+                  <label htmlFor="nin" className="block text-sm font-medium text-gray-700">
+                    National ID Number (NIN)
+                  </label>
+                  <input
+                    {...register('nin')}
+                    type="text"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
+                    placeholder="Enter 11-digit NIN"
+                    maxLength={11}
+                  />
+                  {errors.nin && (
+                    <p className="mt-1 text-sm text-red-600">{errors.nin.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                    First Name *
+                  </label>
+                  <input
+                    {...register('firstName')}
+                    type="text"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
+                    placeholder="Enter first name"
+                  />
+                  {errors.firstName && (
+                    <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="middleName" className="block text-sm font-medium text-gray-700">
+                    Middle Name
+                  </label>
+                  <input
+                    {...register('middleName')}
+                    type="text"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
+                    placeholder="Enter middle name"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                    Last Name *
+                  </label>
+                  <input
+                    {...register('lastName')}
+                    type="text"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
+                    placeholder="Enter last name"
+                  />
+                  {errors.lastName && (
+                    <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">
+                    Date of Birth
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <CalendarIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      {...register('dateOfBirth')}
+                      type="date"
+                      className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
+                    Gender
+                  </label>
+                  <select
+                    {...register('gender')}
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-100"
+                  >
+                    <option value="">Select gender</option>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="maritalStatus" className="block text-sm font-medium text-gray-700">
+                    Marital Status
+                  </label>
+                  <select
+                    {...register('maritalStatus')}
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-100"
+                  >
+                    <option value="">Select marital status</option>
+                    <option value="single">Single</option>
+                    <option value="married">Married</option>
+                    <option value="divorced">Divorced</option>
+                    <option value="widowed">Widowed</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Information */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">Contact Information</h2>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    Email Address
+                    Email Address *
                   </label>
                   <div className="mt-1 relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <MailIcon className="h-5 w-5 text-gray-400" />
                     </div>
                     <input
-                      {...register('email', { 
-                        required: 'Email is required',
-                        pattern: {
-                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                          message: 'Invalid email address'
-                        }
-                      })}
+                      {...register('email')}
                       type="email"
                       className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
                       placeholder="Enter email address"
@@ -261,37 +484,7 @@ export default function EditAgent() {
                 </div>
 
                 <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                    First Name
-                  </label>
-                  <input
-                    {...register('firstName', { required: 'First name is required' })}
-                    type="text"
-                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
-                    placeholder="Enter first name"
-                  />
-                  {errors.firstName && (
-                    <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                    Last Name
-                  </label>
-                  <input
-                    {...register('lastName', { required: 'Last name is required' })}
-                    type="text"
-                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
-                    placeholder="Enter last name"
-                  />
-                  {errors.lastName && (
-                    <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                     Phone Number
                   </label>
                   <div className="mt-1 relative">
@@ -299,20 +492,66 @@ export default function EditAgent() {
                       <PhoneIcon className="h-5 w-5 text-gray-400" />
                     </div>
                     <input
-                      {...register('phoneNumber', { 
-                        pattern: {
-                          value: /^[0-9]{11}$/,
-                          message: 'Phone number must be 11 digits'
-                        }
-                      })}
+                      {...register('phone')}
                       type="tel"
                       className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
                       placeholder="08012345678"
                     />
                   </div>
-                  {errors.phoneNumber && (
-                    <p className="mt-1 text-sm text-red-600">{errors.phoneNumber.message}</p>
+                  {errors.phone && (
+                    <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
                   )}
+                </div>
+
+                <div>
+                  <label htmlFor="whatsAppNumber" className="block text-sm font-medium text-gray-700">
+                    WhatsApp Number
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <PhoneIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      {...register('whatsAppNumber')}
+                      type="tel"
+                      className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
+                      placeholder="08012345678"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="alternativePhone" className="block text-sm font-medium text-gray-700">
+                    Alternative Phone
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <PhoneIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      {...register('alternativePhone')}
+                      type="tel"
+                      className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
+                      placeholder="08012345678"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                  Address
+                </label>
+                <div className="mt-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPinIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <textarea
+                    {...register('address')}
+                    rows="3"
+                    className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
+                    placeholder="Enter full address"
+                  />
                 </div>
               </div>
             </div>
@@ -324,28 +563,240 @@ export default function EditAgent() {
               <h2 className="text-lg font-medium text-gray-900">Location Information</h2>
             </div>
             <div className="px-6 py-4 space-y-4">
+              <LocationSelect
+                selectedState={selectedState}
+                selectedLGA={selectedLGA}
+                selectedWard={selectedWard}
+                onStateChange={(state) => {
+                  setValue('state', state)
+                  setValue('localGovernment', '') // Reset LGA when state changes
+                  setValue('ward', '') // Reset ward when state changes
+                }}
+                onLGAChange={(lga) => {
+                  setValue('localGovernment', lga)
+                  setValue('ward', '') // Reset ward when LGA changes
+                }}
+                onWardChange={(ward) => {
+                  setValue('ward', ward)
+                }}
+                onPollingUnitChange={(pollingUnit) => {
+                  setValue('pollingUnit', pollingUnit)
+                }}
+                errors={errors}
+              />
+            </div>
+          </div>
+
+          {/* Bank Information */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">Bank Information</h2>
+            </div>
+            <div className="px-6 py-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="state" className="block text-sm font-medium text-gray-700">
-                    State
+                  <label htmlFor="bankName" className="block text-sm font-medium text-gray-700">
+                    Bank Name
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <BanknotesIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <select
+                      {...register('bankName')}
+                      className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
+                    >
+                      <option value="">Select bank</option>
+                      {nigerianBanks.map(bank => (
+                        <option key={bank.code} value={bank.name}>
+                          {bank.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="accountName" className="block text-sm font-medium text-gray-700">
+                    Account Name
                   </label>
                   <input
-                    {...register('state')}
+                    {...register('accountName')}
                     type="text"
                     className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
-                    placeholder="Enter state"
+                    placeholder="Enter account name"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="lga" className="block text-sm font-medium text-gray-700">
-                    Local Government Area
+                  <label htmlFor="accountNumber" className="block text-sm font-medium text-gray-700">
+                    Account Number
                   </label>
                   <input
-                    {...register('lga')}
+                    {...register('accountNumber')}
                     type="text"
                     className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
-                    placeholder="Enter LGA"
+                    placeholder="Enter 10-digit account number"
+                    maxLength={10}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="bvn" className="block text-sm font-medium text-gray-700">
+                    BVN
+                  </label>
+                  <div className="mt-1 relative">
+                    <input
+                      {...register('bvn')}
+                      type={showPasswords.bvn ? "text" : "password"}
+                      className="input-field pr-10 border-2 w-full bg-gray-200 border-green-600"
+                      placeholder="Enter 11-digit BVN"
+                      maxLength={11}
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      onClick={() => togglePasswordVisibility('bvn')}
+                    >
+                      {showPasswords.bvn ? (
+                        <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <EyeIcon className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Employment Information */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">Employment Information</h2>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="employmentStatus" className="block text-sm font-medium text-gray-700">
+                    Employment Status
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <BriefcaseIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <select
+                      {...register('employmentStatus')}
+                      className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
+                    >
+                      <option value="">Select employment status</option>
+                      <option value="employed">Employed</option>
+                      <option value="unemployed">Unemployed</option>
+                      <option value="self-employed">Self-employed</option>
+                      <option value="student">Student</option>
+                      <option value="retired">Retired</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
+                    Start Date
+                  </label>
+                  <div className="mt-1 relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <CalendarIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      {...register('startDate')}
+                      type="date"
+                      className="input-field pl-10 border-2 w-full bg-gray-100 border-green-600"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="salary" className="block text-sm font-medium text-gray-700">
+                    Salary (₦)
+                  </label>
+                  <input
+                    {...register('salary')}
+                    type="number"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
+                    placeholder="Enter monthly salary"
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="commissionRate" className="block text-sm font-medium text-gray-700">
+                    Commission Rate (%)
+                  </label>
+                  <input
+                    {...register('commissionRate')}
+                    type="number"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
+                    placeholder="Enter commission rate"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Assignment Information */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">Assignment Information</h2>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="assignedState" className="block text-sm font-medium text-gray-700">
+                    Assigned State
+                  </label>
+                  <input
+                    {...register('assignedState')}
+                    type="text"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
+                    placeholder="Enter assigned state"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="assignedLGA" className="block text-sm font-medium text-gray-700">
+                    Assigned LGA
+                  </label>
+                  <input
+                    {...register('assignedLGA')}
+                    type="text"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
+                    placeholder="Enter assigned LGA"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="assignedWard" className="block text-sm font-medium text-gray-700">
+                    Assigned Ward
+                  </label>
+                  <input
+                    {...register('assignedWard')}
+                    type="text"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
+                    placeholder="Enter assigned ward"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="assignedPollingUnit" className="block text-sm font-medium text-gray-700">
+                    Assigned Polling Unit
+                  </label>
+                  <input
+                    {...register('assignedPollingUnit')}
+                    type="text"
+                    className="mt-1 input-field border-green-600 border-2 w-full bg-gray-200"
+                    placeholder="Enter assigned polling unit"
                   />
                 </div>
               </div>

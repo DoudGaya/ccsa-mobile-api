@@ -1,4 +1,4 @@
-import { Logger } from '../../../lib/logger'
+import ProductionLogger from '../../../lib/productionLogger'
 
 // NIN API configuration
 const NIN_API_BASE_URL = process.env.NIN_API_BASE_URL
@@ -9,7 +9,7 @@ async function lookupNINFromAPI(nin) {
   try {
     const url = `${NIN_API_BASE_URL}/api/lookup/nin?op=level-4&nin=${nin}`
     
-    Logger.debug(`Making NIN API request for NIN: ****${nin.slice(-4)}`)
+    ProductionLogger.debug(`Making NIN API request for NIN: ****${nin.slice(-4)}`)
     
     const response = await fetch(url, {
       method: "GET",
@@ -25,7 +25,7 @@ async function lookupNINFromAPI(nin) {
 
     const data = await response.json()
     
-    Logger.debug("NIN Verification Response status:", data.status)
+    ProductionLogger.debug("NIN Verification Response status:", data.status)
     
     // Check if the API returned success
     if (data.status === 200 && data.data) {
@@ -50,7 +50,7 @@ async function lookupNINFromAPI(nin) {
       throw new Error(data.message || 'NIN not found or invalid')
     }
   } catch (error) {
-    Logger.error('NIN API lookup error:', error.message)
+    ProductionLogger.error('NIN API lookup error:', error.message)
     throw error
   }
 }
@@ -96,7 +96,7 @@ export default async function handler(req, res) {
           ...ninData
         })
       } catch (error) {
-        Logger.error('External NIN API failed:', error.message)
+        ProductionLogger.error('External NIN API failed:', error.message)
         
         // Return a user-friendly error but still indicate format is valid
         return res.status(422).json({ 
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
         })
       }
     } else {
-      Logger.warn('NIN API credentials not configured')
+      ProductionLogger.warn('NIN API credentials not configured')
       
       // If no API is configured, just validate format
       return res.status(200).json({
@@ -120,7 +120,7 @@ export default async function handler(req, res) {
       })
     }
   } catch (error) {
-    Logger.error('Error in NIN verify handler:', error.message)
+    ProductionLogger.error('Error in NIN verify handler:', error.message)
     return res.status(500).json({ 
       error: 'Internal server error',
       isValid: false,

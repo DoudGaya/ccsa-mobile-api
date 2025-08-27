@@ -3,6 +3,7 @@ import { farmerSchema } from '../../../lib/validation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
 import { authMiddleware } from '../../../lib/authMiddleware';
+import ProductionLogger from '../../../lib/productionLogger';
 
 // GET /api/farmers/[id] - Get farmer by ID
 // PUT /api/farmers/[id] - Update farmer
@@ -23,7 +24,7 @@ export default async function handler(req, res) {
     
     if (session) {
       // Web admin user - has access to all farmers
-      console.debug(`Web admin access: ${session.user.email}`);
+      ProductionLogger.debug(`Web admin access: ${session.user.email}`);
       req.isAdmin = true;
       req.user = { 
         uid: session.user.id, 
@@ -32,7 +33,7 @@ export default async function handler(req, res) {
       };
     } else {
       // Mobile agent request - apply Firebase authentication middleware
-      console.debug('Checking Firebase authentication for mobile agent');
+      ProductionLogger.debug('Checking Firebase authentication for mobile agent');
       await authMiddleware(req, res);
       
       // Check if response was already sent by authMiddleware
@@ -69,7 +70,7 @@ export default async function handler(req, res) {
 
 async function getFarmer(req, res, id) {
   try {
-    console.debug(`Fetching farmer data for ID: ${id}`);
+    ProductionLogger.debug(`Fetching farmer data for ID: ${id}`);
     
     const farmer = await prisma.farmer.findUnique({
       where: { id },
@@ -96,11 +97,11 @@ async function getFarmer(req, res, id) {
     });
 
     if (!farmer) {
-      console.warn(`Farmer not found in database for ID: ${id}`);
+      ProductionLogger.warn(`Farmer not found in database for ID: ${id}`);
       return res.status(404).json({ error: 'Farmer not found' });
     }
 
-    console.debug(`Found farmer data for: ${farmer.firstName} ${farmer.lastName}`);
+    ProductionLogger.debug(`Found farmer data for: ${farmer.firstName} ${farmer.lastName}`);
     return res.status(200).json({ farmer });
   } catch (error) {
     console.error('Error fetching farmer from database:', error.message);

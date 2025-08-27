@@ -2,8 +2,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
 import prisma from '../../../lib/prisma';
 import { auth as firebaseAuth } from '../../../lib/firebase-admin';
+import ProductionLogger from '../../../lib/productionLogger';
+import { withPerformanceMonitoring, withSecurityHeaders } from '../../../lib/middleware';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -18,6 +20,7 @@ export default async function handler(req, res) {
     const session = await getServerSession(req, res, authOptions);
     
     if (!session) {
+      ProductionLogger.warn('Unauthorized access attempt to agents API');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -33,7 +36,7 @@ export default async function handler(req, res) {
         return res.status(405).end(`Method ${method} Not Allowed`);
     }
   } catch (error) {
-    console.error('Agents API error:', error.message);
+    ProductionLogger.error('Agents API error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -48,7 +51,7 @@ async function getAgents(req, res) {
       offset = '0'
     } = req.query;
 
-    console.log('Fetching agents from database');
+        ProductionLogger.info('Fetching agents from database');
 
     // Build where clause for filtering
     const where = {
@@ -69,7 +72,7 @@ async function getAgents(req, res) {
       where.isActive = false;
     }
 
-    console.log('Query where clause:', where);
+    ProductionLogger.debug('Query where clause:', where);
 
     // Fetch agents with related data
     const agents = await prisma.user.findMany({
@@ -96,7 +99,7 @@ async function getAgents(req, res) {
       skip: parseInt(offset)
     });
 
-    console.log(`Found ${agents.length} agents`);
+    ProductionLogger.info(`Found ${agents.length} agents`);
 
     // Transform the data to match expected format
     const transformedAgents = agents.map(agent => ({
@@ -134,7 +137,7 @@ async function getAgents(req, res) {
     });
 
   } catch (error) {
-    console.error('Error fetching agents from database:', error);
+    ProductionLogger.error('Error fetching agents from database:', error);
     return res.status(500).json({ 
       error: 'Failed to fetch agents from database',
       details: error.message,
@@ -149,10 +152,10 @@ async function createAgent(req, res) {
   try {
     const { email, firstName, lastName, displayName, phoneNumber } = req.body;
 
-    console.log('Creating agent with data:', { email, firstName, lastName, displayName, phoneNumber });
+    ProductionLogger.info('Creating agent with data:', { email, firstName, lastName, displayName, phoneNumber });
 
     if (!email || (!firstName && !displayName)) {
-      console.log('Validation failed: missing required fields');
+      ProductionLogger.warn('Validation failed: missing required fields');
       return res.status(400).json({ error: 'Email and either first name or display name are required' });
     }
 
@@ -162,7 +165,7 @@ async function createAgent(req, res) {
     });
 
     if (existingUser) {
-      console.log('User already exists in database:', existingUser.email);
+      ProductionLogger.warn('User already exists in database:', existingUser.email);
       return res.status(400).json({ error: 'User with this email already exists' });
     }
 
@@ -170,13 +173,13 @@ async function createAgent(req, res) {
     try {
       firebaseUser = await firebaseAuth.getUserByEmail(email);
       if (firebaseUser) {
-        console.log('User already exists in Firebase:', firebaseUser.email);
+        ProductionLogger.warn('User already exists in Firebase:', firebaseUser.email);
         return res.status(400).json({ error: 'User with this email already exists in Firebase' });
       }
     } catch (firebaseError) {
       // If user doesn't exist in Firebase, that's what we want
       if (firebaseError.code !== 'auth/user-not-found') {
-        console.error('Firebase error checking user:', firebaseError);
+        ProductionLogger.error('Firebase error checking user:', firebaseError);
         return res.status(500).json({ error: 'Error checking Firebase user existence' });
       }
     }
@@ -185,7 +188,7 @@ async function createAgent(req, res) {
     const defaultPassword = '1234567890';
     const finalDisplayName = displayName || `${firstName} ${lastName}`.trim();
 
-    console.log('Creating users in both Firebase and database...');
+    ProductionLogger.info('Creating users in both Firebase and database...');
 
     // Create Firebase user first
     try {
@@ -198,9 +201,9 @@ async function createAgent(req, res) {
         disabled: false
       });
       
-      console.log('Firebase user created successfully:', { uid: firebaseUser.uid, email: firebaseUser.email });
+      ProductionLogger.info('Firebase user created successfully:', { uid: firebaseUser.uid, email: firebaseUser.email });
     } catch (firebaseError) {
-      console.error('Error creating Firebase user:', firebaseError);
+      ProductionLogger.error('Error creating Firebase user:', firebaseError);
       return res.status(500).json({ 
         error: 'Failed to create Firebase user',
         details: firebaseError.message 
@@ -208,7 +211,7 @@ async function createAgent(req, res) {
     }
 
     // Create database user with Firebase UID
-    console.log('Creating database user with Firebase UID:', firebaseUser.uid);
+    ProductionLogger.info('Creating database user with Firebase UID:', firebaseUser.uid);
 
     const bcrypt = await import('bcryptjs');
     const hashedPassword = await bcrypt.hash(defaultPassword, 12);
@@ -239,7 +242,7 @@ async function createAgent(req, res) {
       }
     });
 
-    console.log('Successfully created agent in both Firebase and database:', { 
+    ProductionLogger.info('Successfully created agent in both Firebase and database:', { 
       firebaseUid: firebaseUser.uid, 
       databaseId: newAgent.id,
       email: newAgent.email 
@@ -274,25 +277,25 @@ Password: ${defaultPassword}`
     });
 
   } catch (error) {
-    console.error('Error creating agent - Full error:', error);
-    console.error('Error name:', error.name);
-    console.error('Error code:', error.code);
-    console.error('Error message:', error.message);
+    ProductionLogger.error('Error creating agent - Full error:', error);
+    ProductionLogger.error('Error name:', error.name);
+    ProductionLogger.error('Error code:', error.code);
+    ProductionLogger.error('Error message:', error.message);
     
     // If database creation failed but Firebase user was created, clean up Firebase
     if (firebaseUser && firebaseUser.uid) {
       try {
-        console.log('Cleaning up Firebase user due to database error...');
+        ProductionLogger.info('Cleaning up Firebase user due to database error...');
         await firebaseAuth.deleteUser(firebaseUser.uid);
-        console.log('Firebase user cleanup successful');
+        ProductionLogger.info('Firebase user cleanup successful');
       } catch (cleanupError) {
-        console.error('Failed to cleanup Firebase user:', cleanupError);
+        ProductionLogger.error('Failed to cleanup Firebase user:', cleanupError);
       }
     }
     
     // Check for Prisma-specific errors
     if (error.code === 'P2002') {
-      console.log('Unique constraint failed:', error.meta);
+      ProductionLogger.warn('Unique constraint failed:', error.meta);
       return res.status(400).json({ 
         error: 'A user with this information already exists',
         details: error.message 
@@ -306,3 +309,7 @@ Password: ${defaultPassword}`
     });
   }
 }
+
+export default withSecurityHeaders(
+  withPerformanceMonitoring(handler)
+);

@@ -30,6 +30,19 @@ export default function Farmers() {
     total: 0,
     pages: 0
   })
+  const [analytics, setAnalytics] = useState({
+    overview: {
+      totalFarmers: 0,
+      totalHectares: 0,
+      totalFarms: 0,
+      verificationRate: 0,
+      farmRegistrationRate: 0
+    },
+    topStates: [],
+    topLGAs: [],
+    topCrops: []
+  })
+  const [availableStates, setAvailableStates] = useState([])
 
   useEffect(() => {
     console.log('Farmers Page - Effect triggered:', { 
@@ -77,6 +90,8 @@ export default function Farmers() {
     
     console.log('Farmers Page - All checks passed, fetching farmers')
     fetchFarmers()
+    fetchAnalytics()
+    fetchAvailableStates()
   }, [session, status, pagination.page, hasPermission, permissionsLoading])
 
   useEffect(() => {
@@ -207,6 +222,70 @@ export default function Farmers() {
     }
   }
 
+  const fetchAnalytics = async () => {
+    try {
+      const response = await fetch('/api/farmers/analytics')
+      if (response.ok) {
+        const data = await response.json()
+        setAnalytics(data.analytics)
+      }
+    } catch (error) {
+      console.error('Error fetching analytics:', error)
+    }
+  }
+
+  const fetchAvailableStates = async () => {
+    try {
+      const response = await fetch('/api/locations/states')
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableStates(data.states || [])
+      }
+    } catch (error) {
+      console.error('Error fetching states:', error)
+      // Fallback to some default states
+      setAvailableStates([
+        { name: 'Abia', code: 'AB' },
+        { name: 'Adamawa', code: 'AD' },
+        { name: 'Akwa Ibom', code: 'AK' },
+        { name: 'Anambra', code: 'AN' },
+        { name: 'Bauchi', code: 'BA' },
+        { name: 'Bayelsa', code: 'BY' },
+        { name: 'Benue', code: 'BN' },
+        { name: 'Borno', code: 'BO' },
+        { name: 'Cross River', code: 'CR' },
+        { name: 'Delta', code: 'DE' },
+        { name: 'Ebonyi', code: 'EB' },
+        { name: 'Edo', code: 'ED' },
+        { name: 'Ekiti', code: 'EK' },
+        { name: 'Enugu', code: 'EN' },
+        { name: 'FCT', code: 'FC' },
+        { name: 'Gombe', code: 'GO' },
+        { name: 'Imo', code: 'IM' },
+        { name: 'Jigawa', code: 'JI' },
+        { name: 'Kaduna', code: 'KD' },
+        { name: 'Kano', code: 'KN' },
+        { name: 'Katsina', code: 'KT' },
+        { name: 'Kebbi', code: 'KE' },
+        { name: 'Kogi', code: 'KO' },
+        { name: 'Kwara', code: 'KW' },
+        { name: 'Lagos', code: 'LA' },
+        { name: 'Nasarawa', code: 'NA' },
+        { name: 'Niger', code: 'NI' },
+        { name: 'Ogun', code: 'OG' },
+        { name: 'Ondo', code: 'ON' },
+        { name: 'Osun', code: 'OS' },
+        { name: 'Oyo', code: 'OY' },
+        { name: 'Plateau', code: 'PL' },
+        { name: 'Rivers', code: 'RI' },
+        { name: 'Sokoto', code: 'SO' },
+        { name: 'Taraba', code: 'TA' },
+        { name: 'Yobe', code: 'YO' },
+        { name: 'Zamfara', code: 'ZA' }
+      ])
+    }
+  }
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-GB')
   }
@@ -242,15 +321,114 @@ export default function Farmers() {
           </div>
         </div>
 
-          {/* Summary */}
+        {/* Enhanced Summary Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Stats */}
+          <div className="lg:col-span-2 bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Overview</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600">{analytics.overview.totalFarmers.toLocaleString()}</div>
+                <div className="text-sm text-gray-500">Total Farmers</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600">{analytics.overview.totalHectares.toLocaleString()}</div>
+                <div className="text-sm text-gray-500">Total Hectares</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-600">{analytics.overview.verificationRate}%</div>
+                <div className="text-sm text-gray-500">Verified</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-orange-600">{analytics.overview.farmRegistrationRate}%</div>
+                <div className="text-sm text-gray-500">With Farms</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Crops */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Crops</h3>
+            <div className="space-y-3">
+              {analytics.topCrops.slice(0, 5).map((crop, index) => (
+                <div key={crop.crop} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${
+                      index === 0 ? 'bg-green-500' :
+                      index === 1 ? 'bg-blue-500' :
+                      index === 2 ? 'bg-yellow-500' :
+                      index === 3 ? 'bg-purple-500' : 'bg-gray-500'
+                    }`}></div>
+                    <span className="text-sm font-medium text-gray-900">{crop.crop}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-gray-900">{crop.count}</div>
+                    <div className="text-xs text-gray-500">{crop.percentage}%</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Regional Distribution */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top States */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Top States</h3>
+            <div className="space-y-3">
+              {analytics.topStates.slice(0, 10).map((state, index) => (
+                <div key={state.state} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-xs font-bold text-blue-600">{index + 1}</span>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 capitalize">{state.state}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-gray-900">{state.count.toLocaleString()}</div>
+                    <div className="text-xs text-gray-500">{state.percentage}%</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top LGAs */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Local Governments</h3>
+            <div className="space-y-3">
+              {analytics.topLGAs.slice(0, 10).map((lga, index) => (
+                <div key={`${lga.lga}-${lga.state}`} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-xs font-bold text-green-600">{index + 1}</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 capitalize">{lga.lga}</div>
+                      <div className="text-xs text-gray-500 capitalize">{lga.state} State</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-gray-900">{lga.count.toLocaleString()}</div>
+                    <div className="text-xs text-gray-500">{lga.percentage}%</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Current Page Summary */}
         <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Current Page Summary</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-gray-900">{farmers.length}</div>
-              <div className="text-sm text-gray-500">Current Page</div>
+              <div className="text-sm text-gray-500">Farmers on Page</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{pagination.total}</div>
+              <div className="text-2xl font-bold text-gray-900">{pagination.total.toLocaleString()}</div>
               <div className="text-sm text-gray-500">Total Farmers</div>
             </div>
             <div className="text-center">
@@ -288,10 +466,11 @@ export default function Farmers() {
               onChange={(e) => setFilters({ ...filters, state: e.target.value })}
             >
               <option value="">All States</option>
-              <option value="Kano">Kano</option>
-              <option value="Lagos">Lagos</option>
-              <option value="Kaduna">Kaduna</option>
-              {/* Add more states as needed */}
+              {availableStates.map(state => (
+                <option key={state.name} value={state.name}>
+                  {state.name}
+                </option>
+              ))}
             </select>
 
             {/* Gender Filter */}
@@ -346,9 +525,9 @@ export default function Farmers() {
                       <div className="text-gray-500">{farmer.email}</div>
                     </td>
                     <td className="table-cell">{farmer.nin}</td>
-                    <td className="table-cell">{farmer.phone}</td>
+                    <td className="table-cell">{farmer.phone || farmer.phoneNumber}</td>
                     <td className="table-cell">{farmer.state}</td>
-                    <td className="table-cell">{farmer.lga}</td>
+                    <td className="table-cell">{farmer.lga || farmer.localGovernment}</td>
                     <td className="table-cell">{formatDate(farmer.createdAt)}</td>
                     <td className="table-cell">
                       <div className="flex items-center space-x-2">
