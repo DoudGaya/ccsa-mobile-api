@@ -2,7 +2,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '../../components/Layout';
-import { AlertCircle, CheckCircle, User, MapPin, Crop, Calendar, FileText } from 'lucide-react';
+import { 
+  ExclamationCircleIcon as AlertCircle, 
+  CheckCircleIcon as CheckCircle, 
+  UserIcon as User, 
+  MapPinIcon as MapPin, 
+  CubeIcon as Crop, 
+  CalendarIcon as Calendar, 
+  DocumentTextIcon as FileText 
+} from '@heroicons/react/24/outline';
 
 export default function VerifyCertificate() {
   const router = useRouter();

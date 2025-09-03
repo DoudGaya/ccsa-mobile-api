@@ -282,7 +282,6 @@ export default function FarmerCertificate() {
 
                   {/* Certificate Number & Barcode */}
                   <div className=" flex justify-center border-y border-gray-200 ">
-
                     {/* QR Code for Verification */}
                     <div className="border-gray-300 p-4 flex flex-col items-center justify-center bg-white rounded-lg">
                       <div className="mb-2">
