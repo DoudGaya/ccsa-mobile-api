@@ -19,9 +19,9 @@ model User {
   lastLogin              DateTime?
   lastName               String?
   password               String?
-  passwordChangeRequired Boolean      @default(false)
   phoneNumber            String?
   isVerified             Boolean      @default(false)
+  passwordChangeRequired Boolean      @default(false)
   createdAgents          Agent[]      @relation("CreatedByUser")
   agent                  Agent?
   farmers                Farmer[]
@@ -285,11 +285,11 @@ model roles {
   name        String       @unique
   description String?
   permissions Json?
-  isSystem    Boolean      @default(false) // true for built-in roles, false for custom
+  isSystem    Boolean      @default(false)
   isActive    Boolean      @default(true)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @default(now()) @updatedAt
-  createdBy   String?      // Admin who created this role
+  createdBy   String?
   userRoles   user_roles[]
 
   @@map("roles")
@@ -301,8 +301,8 @@ model user_roles {
   roleId     String
   assignedAt DateTime @default(now())
   assignedBy String?
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role       roles    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId])
   @@map("user_roles")

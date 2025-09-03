@@ -8,6 +8,7 @@ import {
   MagnifyingGlassIcon as SearchIcon,
   EyeIcon,
   DocumentTextIcon,
+  PencilIcon,
   FunnelIcon as FilterIcon 
 } from '@heroicons/react/24/outline'
 
@@ -566,6 +567,15 @@ export default function Farmers() {
                         >
                           <EyeIcon className="h-5 w-5" />
                         </Link>
+                        <PermissionGate permission={PERMISSIONS.FARMERS_UPDATE}>
+                          <Link
+                            href={`/farmers/${farmer.id}/edit`}
+                            className="text-orange-600 hover:text-orange-900"
+                            title="Edit Farmer"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </Link>
+                        </PermissionGate>
                         <Link
                           href={`/certificates/farmer/${farmer.id}`}
                           className="text-green-600 hover:text-green-900"

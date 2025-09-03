@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../../../components/Layout'
 import ccsaCertLogo from '../../../public/certificate-logo.png'
+import { QRCodeCanvas } from 'qrcode.react'
 import { usePermissions, PERMISSIONS } from '../../../components/PermissionProvider'
 import { 
   DocumentTextIcon,
@@ -44,9 +45,11 @@ export default function FarmerCertificate() {
     return `CCSA/${year}/${paddedId}`
   }
 
-  // Generate barcode data
-  const generateBarcodeData = (certificateNumber) => {
-    return certificateNumber.replace(/\//g, '')
+  // Generate certificate verification data
+  const generateVerificationData = (farmer) => {
+    // Create verification URL that matches the PDF certificates
+    const certificateId = `CCSA-${new Date().getFullYear()}-${farmer.id.slice(-6).toUpperCase()}`
+    return `https://fims.cosmopolitan.edu.ng/verify-certificate/${certificateId}`
   }
 
   useEffect(() => {
@@ -191,7 +194,7 @@ export default function FarmerCertificate() {
   }
 
   const certificateNumber = generateCertificateNumber(farmer.id, farmer.createdAt)
-  const barcodeData = generateBarcodeData(certificateNumber)
+  const verificationUrl = generateVerificationData(farmer)
   const issueDate = farmer.certificates?.[0]?.issuedDate || farmer.createdAt
   const expiryDate = farmer.certificates?.[0]?.expiryDate || new Date(new Date(farmer.createdAt).getTime() + 365*24*60*60*1000).toISOString()
 
@@ -278,31 +281,25 @@ export default function FarmerCertificate() {
                   </div>
 
                   {/* Certificate Number & Barcode */}
-                  <div className=" flex justify-between border-y border-gray-200 ">
-                   
-                    <div className=" p-3 text-left rounded mb-2">
-                      <div className="text-sm font-bold text-gray-800">
-                        Certificate No: <span className="text-green-700">{certificateNumber}</span>
+                  <div className=" flex justify-center border-y border-gray-200 ">
+
+                    {/* QR Code for Verification */}
+                    <div className="border-gray-300 p-4 flex flex-col items-center justify-center bg-white rounded-lg">
+                      <div className="mb-2">
+                        <QRCodeCanvas
+                          value={verificationUrl}
+                          size={100}
+                          level="M"
+                          includeMargin={true}
+                          fgColor="#000000"
+                          bgColor="#FFFFFF"
+                        />
                       </div>
-                      <div className="text-xs text-gray-600 mt-1">
-                        Issued: {formatDate(issueDate)}
-                      </div>
-                      {/* <div className="text-xs text-gray-600">
-                        Valid Until: {formatDate(expiryDate)}
-                      </div> */}
-
-
-                    </div>
-
-                    {/* Compact Barcode */}
-                    <div className=" border-gray-300 p-2 flex items-center justify-center">
-                      <div className="font-mono text-xs text-center">
-                        <div className="flex justify-center space-x-px mb-1">
-                          {barcodeData.substring(0, 12).split('').map((char, index) => (
-                            <div key={index} className="bg-black w-px h-4"></div>
-                          ))}
+                      <div className="text-xs text-gray-600 text-center">
+                        <div className="font-semibold mb-1">Scan to Verify</div>
+                        <div className="text-xs break-all max-w-[400px]">
+                          Certificate ID: {certificateNumber}
                         </div>
-                        <div className="text-black text-xs">{barcodeData.substring(0, 12)}</div>
                       </div>
                     </div>
                   </div>

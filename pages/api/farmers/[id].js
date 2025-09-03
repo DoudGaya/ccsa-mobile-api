@@ -102,7 +102,7 @@ async function getFarmer(req, res, id) {
     }
 
     ProductionLogger.debug(`Found farmer data for: ${farmer.firstName} ${farmer.lastName}`);
-    return res.status(200).json({ farmer });
+    return res.status(200).json(farmer);
   } catch (error) {
     console.error('Error fetching farmer from database:', error.message);
     return res.status(500).json({ 
@@ -129,6 +129,11 @@ async function updateFarmer(req, res, id) {
     // Validate farmer data
     const validatedFarmer = farmerSchema.parse(farmerData);
 
+    // Clean up the data to remove undefined values that could cause issues
+    const cleanedData = Object.fromEntries(
+      Object.entries(validatedFarmer).filter(([_, value]) => value !== undefined)
+    );
+
     // Check for unique constraints (excluding current farmer)
     const duplicateFarmer = await prisma.farmer.findFirst({
       where: {
@@ -136,10 +141,10 @@ async function updateFarmer(req, res, id) {
           { id: { not: id } },
           {
             OR: [
-              { nin: validatedFarmer.nin },
-              { phone: validatedFarmer.phone },
-              ...(validatedFarmer.email ? [{ email: validatedFarmer.email }] : []),
-              ...(validatedFarmer.bvn ? [{ bvn: validatedFarmer.bvn }] : []),
+              { nin: cleanedData.nin },
+              { phone: cleanedData.phone },
+              ...(cleanedData.email ? [{ email: cleanedData.email }] : []),
+              ...(cleanedData.bvn ? [{ bvn: cleanedData.bvn }] : []),
             ],
           },
         ],
@@ -156,7 +161,7 @@ async function updateFarmer(req, res, id) {
     const farmer = await prisma.farmer.update({
       where: { id },
       data: {
-        ...validatedFarmer,
+        ...cleanedData,
         referees: {
           deleteMany: {},
           create: referees?.map(referee => ({

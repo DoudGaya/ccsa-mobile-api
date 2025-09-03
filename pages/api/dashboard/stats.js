@@ -14,13 +14,13 @@ export default async function handler(req, res) {
       return res.status(401).json({ message: 'Unauthorized' })
     }
 
-    ProductionLogger.debug('Fetching dashboard statistics');
+    Logger.debug('Fetching dashboard statistics');
     
     // Get dashboard statistics with fallback handling
     const result = await getDashboardStats();
     
     if (result.offline) {
-      ProductionLogger.warn('Using fallback dashboard data - database offline');
+      Logger.warn('Using fallback dashboard data - database offline');
       return res.status(200).json({
         ...result.data,
         databaseStatus: 'offline',
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       });
     }
     
-    ProductionLogger.debug('Dashboard stats retrieved from database');
+    Logger.debug('Dashboard stats retrieved from database');
     return res.status(200).json({
       ...result.data,
       databaseStatus: 'online',
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    ProductionLogger.error('Dashboard stats error:', error.message)
+    Logger.error('Dashboard stats error:', error.message)
     
     // Return fallback data for any other errors
     return res.status(200).json({

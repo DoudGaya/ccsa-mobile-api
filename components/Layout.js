@@ -57,12 +57,12 @@ const navigation = [
     permissions: [PERMISSIONS.USERS_READ],
     roles: ['SUPER_ADMIN', 'ADMIN'] // Additional role restriction
   },
-  { 
-    name: 'Analytics', 
-    href: '/analytics', 
-    icon: ChartBarIcon,
-    permissions: [] // Remove permission requirement to fix access issue
-  },
+  // { 
+  //   name: 'Analytics', 
+  //   href: '/analytics', 
+  //   icon: ChartBarIcon,
+  //   permissions: [] // Remove permission requirement to fix access issue
+  // },
   { 
     name: 'Settings', 
     href: '/settings', 

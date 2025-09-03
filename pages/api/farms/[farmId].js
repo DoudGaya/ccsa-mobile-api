@@ -1,8 +1,38 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
 import { PrismaClient } from '@prisma/client';
-import { getSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth';
+import { auth } from '../../../lib/firebase-admin';
+import ProductionLogger from '../../../lib/productionLogger';
 
 const prisma = new PrismaClient();
+
+// Helper function for Firebase authentication that doesn't send responses
+async function validateFirebaseAuth(req) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return { success: false, error: 'No authorization header' };
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      return { success: false, error: 'No token provided' };
+    }
+
+    const decodedToken = await auth.verifyIdToken(token);
+    
+    req.user = {
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      ...decodedToken
+    };
+
+    return { success: true };
+  } catch (error) {
+    ProductionLogger.error('Firebase auth validation error:', error.message);
+    return { success: false, error: 'Invalid or expired token' };
+  }
+}
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -15,8 +45,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)
-    const session = await getSession({ req });
+    // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)  
+    const session = await getServerSession(req, res);
+    
+    ProductionLogger.debug('Farm API - Session check', { 
+      hasSession: !!session, 
+      sessionUser: session?.user, 
+      method: req.method,
+      url: req.url 
+    });
     
     if (session) {
       // Web admin user - has access to all farms
@@ -26,10 +63,17 @@ export default async function handler(req, res) {
         email: session.user.email,
         role: session.user.role 
       };
+      ProductionLogger.debug('Farm API - Using NextAuth session', { email: session.user.email });
     } else {
-      // Mobile agent request - apply Firebase authentication middleware
-      await authMiddleware(req, res);
+      // Mobile agent request - check for Firebase authentication
+      ProductionLogger.debug('Farm API - No session, checking Firebase auth');
+      const authResult = await validateFirebaseAuth(req);
+      if (!authResult.success) {
+        ProductionLogger.warn('Farm API - Firebase auth failed', { error: authResult.error });
+        return res.status(401).json({ error: authResult.error });
+      }
       req.isAdmin = false;
+      ProductionLogger.debug('Farm API - Using Firebase auth', { uid: req.user.uid });
     }
     
     const { farmId } = req.query;
