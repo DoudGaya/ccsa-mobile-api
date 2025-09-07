@@ -1,7 +1,6 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
-import dynamic from 'next/dynamic'
 import Layout from '../components/Layout'
 import { 
   UsersIcon, 
@@ -14,45 +13,6 @@ import {
   CalendarIcon,
   GlobeAltIcon
 } from '@heroicons/react/24/outline'
-
-// Dynamically import Chart.js components to avoid SSR issues
-const Line = dynamic(() => import('react-chartjs-2').then((mod) => mod.Line), {
-  ssr: false,
-})
-const Bar = dynamic(() => import('react-chartjs-2').then((mod) => mod.Bar), {
-  ssr: false,
-})
-const Doughnut = dynamic(() => import('react-chartjs-2').then((mod) => mod.Doughnut), {
-  ssr: false,
-})
-
-// Chart.js registration
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js'
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-)
 
 export default function Dashboard() {
   const { data: session, status } = useSession()
@@ -102,159 +62,12 @@ export default function Dashboard() {
     return num?.toLocaleString() || 0
   }
 
-  // Chart configurations
-  const createBarChartData = (trends) => {
-    if (!trends?.monthly) return null
-    
-    // Filter to start from 2025 and ensure consistent bar sizes
-    const monthlyData = trends.monthly.filter(month => {
-      const year = new Date(month.date).getFullYear()
-      return year >= 2025
-    })
-
-    return {
-      labels: monthlyData.map(month => month.month),
-      datasets: [
-        {
-          label: 'Farmer Registrations',
-          data: monthlyData.map(month => month.count),
-          backgroundColor: 'rgba(59, 130, 246, 0.8)',
-          borderColor: 'rgba(59, 130, 246, 1)',
-          borderWidth: 2,
-          borderRadius: 6,
-          borderSkipped: false,
-        }
-      ]
-    }
-  }
-
-  const createDoughnutChartData = (demographics) => {
-    if (!demographics?.byGender) return null
-    
-    const colors = ['#3B82F6', '#EC4899', '#6B7280']
-    return {
-      labels: demographics.byGender.map(g => g.gender),
-      datasets: [
-        {
-          data: demographics.byGender.map(g => g.count),
-          backgroundColor: colors.slice(0, demographics.byGender.length),
-          borderColor: colors.slice(0, demographics.byGender.length),
-          borderWidth: 2,
-        }
-      ]
-    }
-  }
-
-  const createProgressChartData = (overview) => {
-    const progress = overview?.progressPercentage || 0
-    const remaining = 100 - progress
-    
-    return {
-      labels: ['Completed', 'Remaining'],
-      datasets: [
-        {
-          data: [progress, remaining],
-          backgroundColor: ['#10B981', '#E5E7EB'],
-          borderColor: ['#059669', '#D1D5DB'],
-          borderWidth: 2,
-        }
-      ]
-    }
-  }
-
-  // Chart options
-  const barChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: 'white',
-        bodyColor: 'white',
-        borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1,
-      },
-    },
-    scales: {
-      x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          color: '#6B7280',
-          font: {
-            size: 12,
-          },
-        },
-      },
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: 'rgba(229, 231, 235, 0.5)',
-        },
-        ticks: {
-          color: '#6B7280',
-          font: {
-            size: 12,
-          },
-        },
-      },
-    },
-  }
-
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          padding: 20,
-          color: '#6B7280',
-          font: {
-            size: 14,
-          },
-        },
-      },
-      tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: 'white',
-        bodyColor: 'white',
-        callbacks: {
-          label: function(context) {
-            const total = context.dataset.data.reduce((a, b) => a + b, 0)
-            const percentage = ((context.parsed / total) * 100).toFixed(1)
-            return `${context.label}: ${context.formattedValue} (${percentage}%)`
-          }
-        }
-      },
-    },
-    cutout: '60%',
-  }
-
-  const progressOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: 'white',
-        bodyColor: 'white',
-        callbacks: {
-          label: function(context) {
-            const percentage = context.parsed.toFixed(1)
-            return `${context.label}: ${percentage}%`
-          }
-        }
-      },
-    },
-    cutout: '70%',
+  // Helper function to get progress color
+  const getProgressColor = (percentage) => {
+    if (percentage >= 75) return 'bg-green-500'
+    if (percentage >= 50) return 'bg-yellow-500'
+    if (percentage >= 25) return 'bg-orange-500'
+    return 'bg-red-500'
   }
 
   if (status === 'loading' || loading) {
@@ -409,189 +222,110 @@ export default function Dashboard() {
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Monthly Trends Chart */}
-          <div className="lg:col-span-2 bg-white shadow rounded-lg">
+          <div className="bg-white shadow rounded-lg">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 flex items-center">
                 <ChartBarIcon className="h-5 w-5 mr-2 text-blue-500" />
-                Registration Trends (From 2025)
+                Registration Trends (12 Months)
               </h3>
-              <p className="text-sm text-gray-500 mt-1">Monthly farmer registration statistics</p>
             </div>
             <div className="p-6">
-              <div className="h-80">
-                {trends?.monthly && createBarChartData(trends) ? (
-                  <Bar data={createBarChartData(trends)} options={barChartOptions} />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    <div className="text-center">
-                      <ChartBarIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>No registration data available</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          {/* Gender Distribution */}
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Gender Distribution</h3>
-              <p className="text-sm text-gray-500 mt-1">Farmer demographics</p>
-            </div>
-            <div className="p-6">
-              <div className="h-80">
-                {demographics?.byGender && createDoughnutChartData(demographics) ? (
-                  <Doughnut data={createDoughnutChartData(demographics)} options={doughnutOptions} />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    <div className="text-center">
-                      <UsersIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>No gender data available</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Goal Progress Chart */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-1 bg-white shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Goal Progress</h3>
-              <p className="text-sm text-gray-500 mt-1">2M farmers target</p>
-            </div>
-            <div className="p-6">
-              <div className="h-60">
-                {overview && createProgressChartData(overview) ? (
-                  <div className="relative">
-                    <Doughnut data={createProgressChartData(overview)} options={progressOptions} />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900">
-                          {overview.progressPercentage?.toFixed(1)}%
-                        </div>
-                        <div className="text-sm text-gray-500">Complete</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    <TrophyIcon className="h-12 w-12 text-gray-300" />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Top Crops Chart */}
-          <div className="lg:col-span-3 bg-white shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Top Registered Crops</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                {crops?.totalCrops || 0} different crops • {crops?.topCrops?.reduce((sum, crop) => sum + crop.count, 0) || 0} total registrations • Click to view farmers
-              </p>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                {(crops?.topCrops || []).slice(0, 8).map((crop, index) => {
-                  const maxCount = Math.max(...(crops?.topCrops || []).slice(0, 8).map(c => c.count))
-                  const relativePercentage = maxCount > 0 ? (crop.count / maxCount) * 100 : 0
-                  const colors = [
-                    'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500',
-                    'bg-pink-500', 'bg-indigo-500', 'bg-red-500', 'bg-orange-500'
-                  ]
+              <div className="h-64 flex items-end justify-between space-x-2">
+                {trends.monthly.map((month, index) => {
+                  const maxCount = Math.max(...trends.monthly.map(m => m.count))
+                  // Ensure proper height calculation with minimum height for non-zero values
+                  let height = 0
+                  if (month.count === 0) {
+                    height = 0
+                  } else if (maxCount === 0) {
+                    height = 20 // Default height if all are zero
+                  } else {
+                    height = Math.max(10, (month.count / maxCount) * 90) // 10% minimum, 90% maximum
+                  }
                   
                   return (
-                    <div 
-                      key={crop.crop} 
-                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
-                      onClick={() => router.push(`/filtered-farmers?type=crop&value=${encodeURIComponent(crop.crop)}&label=${encodeURIComponent(crop.crop)}`)}
-                    >
-                      <div className="flex items-center flex-1">
-                        <div className={`w-3 h-3 rounded-full ${colors[index % colors.length]} mr-3`}></div>
-                        <span className="text-sm font-medium text-gray-900 capitalize w-32 truncate">
-                          {crop.crop}
-                        </span>
-                        <div className="flex-1 mx-4">
-                          <div className="w-full bg-gray-200 rounded-full h-3">
-                            <div 
-                              className={`${colors[index % colors.length].replace('bg-', 'bg-')} h-3 rounded-full transition-all duration-500`}
-                              style={{ width: `${relativePercentage}%` }}
-                            ></div>
-                          </div>
-                        </div>
+                    <div key={index} className="flex-1 flex flex-col items-center">
+                      <div 
+                        className={`w-full rounded-t hover:bg-blue-600 transition-colors duration-200 ${
+                          month.count === 0 ? 'bg-gray-300' : 'bg-blue-500'
+                        }`}
+                        style={{ 
+                          height: `${height}%`,
+                          minHeight: month.count > 0 ? '8px' : '2px'
+                        }}
+                        title={`${month.month}: ${month.count} farmers`}
+                      ></div>
+                      <div className="text-xs text-gray-500 mt-2 transform -rotate-45 origin-center">
+                        {month.month}
                       </div>
-                      <div className="text-right ml-4">
-                        <span className="text-lg font-bold text-gray-900">
-                          {formatNumber(crop.count)}
-                        </span>
-                        <div className="text-xs text-gray-500">
-                          Primary: {crop.primary || 0} • Secondary: {crop.secondary || 0}
-                        </div>
+                      <div className="text-xs font-medium text-gray-700 mt-1">
+                        {month.count}
                       </div>
                     </div>
                   )
                 })}
               </div>
-              
-              {(!crops?.topCrops || crops.topCrops.length === 0) && (
-                <div className="text-center py-12 text-gray-500">
-                  <MapIcon className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">No crop data available yet</p>
-                  <p className="text-sm">Crops will appear as farmers register their farms</p>
-                </div>
-              )}
+            </div>
+          </div>
+
+          {/* Gender Distribution */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Gender</h3>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {demographics.byGender.map((gender, index) => {
+                  const percentage = overview.totalFarmers > 0 ? (gender.count / overview.totalFarmers) * 100 : 0
+                  const colors = ['bg-blue-500', 'bg-pink-500', 'bg-gray-400']
+                  const color = colors[index] || 'bg-gray-400'
+                  
+                  return (
+                    <div key={gender.gender}>
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium text-gray-700 capitalize">{gender.gender}</span>
+                        <span className="text-gray-500">{gender.count} ({percentage.toFixed(1)}%)</span>
+                      </div>
+                      <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`${color} h-2 rounded-full transition-all duration-500`}
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Geographic and Cluster Analysis */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top States */}
+        <div className="grid grid-cols-1 gap-6">
+          {/* Top Crops */}
           <div className="bg-white shadow rounded-lg">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                <MapIcon className="h-5 w-5 mr-2 text-green-500" />
-                Top States by Farmers
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">Geographic distribution across Nigeria • Click to view farmers</p>
+              <h3 className="text-lg font-medium text-gray-900">Top Registered Crops</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {crops?.totalCrops || 0} different crops • {crops?.topCrops?.reduce((sum, crop) => sum + crop.count, 0) || 0} total registrations
+              </p>
             </div>
             <div className="p-6">
-              <div className="space-y-4">
-                {geography.byState.slice(0, 10).map((state, index) => {
-                  const maxCount = Math.max(...geography.byState.slice(0, 10).map(s => s.count))
-                  const relativePercentage = maxCount > 0 ? (state.count / maxCount) * 100 : 0
-                  const statePercentage = overview.totalFarmers > 0 ? (state.count / overview.totalFarmers) * 100 : 0
+              <div className="space-y-3">
+                {(crops?.topCrops || []).slice(0, 10).map((crop, index) => {
+                  // Calculate relative percentage based on the highest crop count
+                  const maxCount = Math.max(...(crops?.topCrops || []).slice(0, 10).map(c => c.count))
+                  const relativePercentage = maxCount > 0 ? (crop.count / maxCount) * 100 : 0
                   
                   return (
-                    <div 
-                      key={state.state} 
-                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-green-50 transition-colors cursor-pointer"
-                      onClick={() => router.push(`/filtered-farmers?type=state&value=${encodeURIComponent(state.state)}&label=${encodeURIComponent(state.state)}`)}
-                    >
+                    <div key={crop.crop} className="flex items-center justify-between">
                       <div className="flex items-center flex-1">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-sm font-bold text-green-600">{index + 1}</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold text-gray-900 capitalize">
-                              {state.state}
-                            </span>
-                            <div className="text-right">
-                              <span className="text-lg font-bold text-green-600">
-                                {formatNumber(state.count)}
-                              </span>
-                              <div className="text-xs text-gray-500">
-                                {statePercentage.toFixed(1)}% of total
-                              </div>
-                            </div>
-                          </div>
+                        <span className="text-sm font-medium text-gray-900 capitalize w-24 truncate">
+                          {crop.crop}
+                        </span>
+                        <div className="flex-1 mx-3">
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
                               className="bg-green-500 h-2 rounded-full transition-all duration-500"
@@ -600,6 +334,57 @@ export default function Dashboard() {
                           </div>
                         </div>
                       </div>
+                      <div className="text-right ml-2">
+                        <span className="text-sm text-gray-600">
+                          {formatNumber(crop.count)}
+                        </span>
+                        <div className="text-xs text-gray-500">
+                          P:{crop.primary || 0} S:{crop.secondary || 0}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              
+              {(!crops?.topCrops || crops.topCrops.length === 0) && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No crop data available yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top States */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Top States by Farmers</h3>
+            </div>
+            <div className="p-6">
+              <div className="space-y-3">
+                {geography.byState.slice(0, 10).map((state, index) => {
+                  // Calculate relative percentage based on the highest state count
+                  const maxCount = Math.max(...geography.byState.slice(0, 10).map(s => s.count))
+                  const relativePercentage = maxCount > 0 ? (state.count / maxCount) * 100 : 0
+                  
+                  return (
+                    <div key={state.state} className="flex items-center justify-between">
+                      <div className="flex items-center flex-1">
+                        <span className="text-sm font-medium text-gray-900 capitalize w-20 truncate">
+                          {state.state}
+                        </span>
+                        <div className="flex-1 mx-3">
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                              style={{ width: `${relativePercentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-sm text-gray-600 ml-2">
+                        {formatNumber(state.count)}
+                      </span>
                     </div>
                   )
                 })}
@@ -610,66 +395,64 @@ export default function Dashboard() {
           {/* Top Clusters */}
           <div className="bg-white shadow rounded-lg">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                <BuildingOfficeIcon className="h-5 w-5 mr-2 text-purple-500" />
-                Cluster Performance
-              </h3>
+              <h3 className="text-lg font-medium text-gray-900">Cluster Performance & Progress</h3>
               <p className="text-sm text-gray-500 mt-1">
-                {clusters.activeClusters} active • {clusters.totalClusters} total clusters • Click to view farmers
+                {clusters.activeClusters} active clusters • {clusters.totalClusters} total
               </p>
             </div>
             <div className="p-6">
-              <div className="space-y-4">
-                {clusters.byClusters.slice(0, 8).map((cluster, index) => {
+              <div className="gap-4 grid grid-cols-3">
+                {clusters.byClusters.slice(0, 10).map((cluster, index) => {
+                  // Calculate relative bar width for visual comparison
                   const maxFarmers = Math.max(...clusters.byClusters.map(c => c.farmersCount));
                   const barWidth = maxFarmers > 0 ? (cluster.farmersCount / maxFarmers) * 100 : 0;
                   
                   return (
-                    <div 
-                      key={cluster.clusterId} 
-                      className="border rounded-lg p-4 hover:bg-purple-50 transition-colors cursor-pointer"
-                      onClick={() => router.push(`/filtered-farmers?type=cluster&value=${encodeURIComponent(cluster.clusterId)}&label=${encodeURIComponent(cluster.clusterTitle)}`)}
-                    >
-                      <div className="flex items-start justify-between mb-3">
+                    <div key={cluster.clusterId} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="inline-flex items-center justify-center w-6 h-6 bg-purple-100 text-purple-600 text-xs font-bold rounded-full">
-                              {index + 1}
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-gray-900">
+                              #{index + 1}
                             </span>
                             <h4 className="text-sm font-bold text-gray-900 truncate">
                               {cluster.clusterTitle}
                             </h4>
                             {cluster.isActive && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                                 Active
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 mb-2">
+                          <p className="text-xs text-gray-500 mt-1">
                             {cluster.clusterDescription}
                           </p>
                           {cluster.clusterLeadName && (
-                            <p className="text-xs text-gray-600">
+                            <p className="text-xs text-gray-600 mt-1">
                               Lead: {cluster.clusterLeadName}
                             </p>
                           )}
                         </div>
                         <div className="text-right ml-4">
-                          <div className="text-xl font-bold text-purple-600">
+                          <div className="text-lg font-bold text-green-600">
                             {formatNumber(cluster.farmersCount)}
                           </div>
                           <div className="text-xs text-gray-500">farmers</div>
+                          <div className="text-xs text-blue-600 font-medium">
+                            {cluster.progressPercentage}% of total
+                          </div>
                         </div>
                       </div>
                       
+                      {/* Progress bar for this cluster */}
                       <div className="mt-3">
                         <div className="flex justify-between text-xs text-gray-600 mb-1">
-                          <span>Performance</span>
-                          <span>{cluster.progressPercentage}% of total</span>
+                          <span>Cluster Progress</span>
+                          <span>{cluster.farmersCount} farmers</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div 
-                            className="bg-purple-500 h-2 rounded-full transition-all duration-500"
+                            className="bg-blue-500 h-2 rounded-full transition-all duration-500"
                             style={{ width: `${barWidth}%` }}
                           ></div>
                         </div>
@@ -680,10 +463,8 @@ export default function Dashboard() {
               </div>
               
               {clusters.byClusters.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  <BuildingOfficeIcon className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">No clusters found</p>
-                  <p className="text-sm">Please assign farmers to clusters</p>
+                <div className="text-center py-8 text-gray-500">
+                  <p>No clusters found. Please assign farmers to clusters.</p>
                 </div>
               )}
             </div>

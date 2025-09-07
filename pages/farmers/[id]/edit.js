@@ -128,6 +128,30 @@ export default function EditFarmer() {
     }))
   }
 
+  const handleStateChange = (state) => {
+    setFormData(prev => ({
+      ...prev,
+      state: state || '',
+      lga: '', // Reset LGA when state changes
+      ward: '' // Reset ward when state changes
+    }))
+  }
+
+  const handleLGAChange = (lga) => {
+    setFormData(prev => ({
+      ...prev,
+      lga: lga || '',
+      ward: '' // Reset ward when LGA changes
+    }))
+  }
+
+  const handleWardChange = (ward) => {
+    setFormData(prev => ({
+      ...prev,
+      ward: ward || ''
+    }))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSaving(true)
@@ -470,7 +494,9 @@ export default function EditFarmer() {
                 initialState={formData.state}
                 initialLga={formData.lga}
                 initialWard={formData.ward}
-                onChange={handleLocationChange}
+                onStateChange={handleStateChange}
+                onLGAChange={handleLGAChange}
+                onWardChange={handleWardChange}
               />
             </div>
           </div>
