@@ -2,6 +2,36 @@ import twilio from 'twilio';
 import ProductionLogger from '../../../lib/productionLogger';
 import TermiiService from '../../../lib/termiiService';
 
+// Phone number formatting utilities
+function formatNigerianPhoneNumber(phoneNumber) {
+  // Remove any non-digit characters
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // If number starts with 0, replace with +234
+  if (cleaned.startsWith('0')) {
+    return `+234${cleaned.substring(1)}`;
+  }
+  
+  // If number starts with 234, add +
+  if (cleaned.startsWith('234')) {
+    return `+${cleaned}`;
+  }
+  
+  // If number starts with +234, return as is
+  if (phoneNumber.startsWith('+234')) {
+    return phoneNumber;
+  }
+  
+  // Default: assume it's a Nigerian number without country code
+  return `+234${cleaned}`;
+}
+
+function isValidNigerianPhoneNumber(phoneNumber) {
+  // Nigerian numbers: +234 followed by 10 digits starting with 7, 8, or 9
+  const nigerianPhoneRegex = /^\+234[789][01]\d{8}$/;
+  return nigerianPhoneRegex.test(phoneNumber);
+}
+
 // Initialize Twilio client only if credentials are properly configured
 let client = null;
 if (process.env.TWILIO_ACCOUNT_SID && 
@@ -22,13 +52,30 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { phoneNumber } = req.body;
+    let { phoneNumber } = req.body;
 
     if (!phoneNumber) {
       return res.status(400).json({ error: 'Phone number is required' });
     }
 
-    ProductionLogger.debug('Attempting to send SMS verification', { phoneNumber: phoneNumber.slice(-4) });
+    // Format phone number to ensure it's in international format
+    phoneNumber = formatNigerianPhoneNumber(phoneNumber);
+    
+    // Validate the formatted phone number
+    if (!isValidNigerianPhoneNumber(phoneNumber)) {
+      return res.status(400).json({ 
+        error: 'Invalid Nigerian phone number format',
+        provided: req.body.phoneNumber,
+        formatted: phoneNumber,
+        expectedFormat: '+234XXXXXXXXXX (starting with 7, 8, or 9)'
+      });
+    }
+
+    ProductionLogger.debug('Attempting to send SMS verification', { 
+      originalNumber: req.body.phoneNumber,
+      formattedNumber: phoneNumber,
+      lastFourDigits: phoneNumber.slice(-4) 
+    });
 
     let verificationResult = null;
     let provider = 'unknown';

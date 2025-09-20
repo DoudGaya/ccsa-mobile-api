@@ -30,7 +30,7 @@ const navigation = [
   { name: 'Agents', href: '/agents', icon: UserGroupIcon },
   { name: 'Clusters', href: '/clusters', icon: BuildingOfficeIcon },
   { name: 'Farms', href: '/farms', icon: GlobeAltIcon },
-  { name: 'Map View', href: '/map', icon: MapIcon },
+  // { name: 'Map View', href: '/map', icon: MapIcon },
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   // { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
   { name: 'GIS (Google)', href: '/gis-map-google', icon: MapIcon },
@@ -347,19 +347,19 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
               </div>
 
               {/* Notifications */}
-              <button className="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors duration-200 relative">
+              {/* <button className="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors duration-200 relative">
                 <BellIcon className="h-5 w-5" />
-                {/* Notification badge */}
+
                 <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white"></span>
-              </button>
+              </button> */}
 
               {/* Help */}
-              <Link
+              {/* <Link
                 href="/help"
                 className="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors duration-200"
               >
                 <QuestionMarkCircleIcon className="h-5 w-5" />
-              </Link>
+              </Link> */}
 
               {/* User profile dropdown area */}
               <div className="flex items-center space-x-3">

@@ -49,7 +49,7 @@ export default function FarmerCertificate() {
   const generateVerificationData = (farmer) => {
     // Create verification URL that matches the PDF certificates
     const certificateId = `CCSA-${new Date().getFullYear()}-${farmer.id.slice(-6).toUpperCase()}`
-    return `https://fims.cosmopolitan.edu.ng/verify-certificate/${certificateId}`
+    return `http://192.168.0.5:3000/verify-certificate/${certificateId}`
   }
 
   useEffect(() => {
