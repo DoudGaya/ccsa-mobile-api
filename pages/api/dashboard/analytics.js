@@ -1,5 +1,5 @@
 import { getSession } from 'next-auth/react'
-import { prisma } from '../../../lib/prisma'
+import prisma from '../../../lib/prisma'
 import { calculateTotalHectares, calculateFarmerStatus } from '../../../lib/farmCalculations'
 // import { Logger } from '../../../lib/logger' // Commented out to avoid issues
 

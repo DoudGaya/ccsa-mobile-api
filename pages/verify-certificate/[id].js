@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import Layout from '../../components/Layout';
+import { 
+  formatFullName, 
+  formatLocation, 
+  formatCropName, 
+  toTitleCase,
+  formatEmploymentStatus,
+  formatMaritalStatus 
+} from '../../lib/textUtils';
 import { 
   ExclamationCircleIcon as AlertCircle, 
   CheckCircleIcon as CheckCircle, 
@@ -9,8 +18,64 @@ import {
   MapPinIcon as MapPin, 
   CubeIcon as Crop, 
   CalendarIcon as Calendar, 
-  DocumentTextIcon as FileText 
+  DocumentTextIcon as FileText,
+  PrinterIcon as Printer 
 } from '@heroicons/react/24/outline';
+
+// Dynamically import the map component to avoid SSR issues
+const DynamicMap = dynamic(
+  () => import('react-leaflet').then((mod) => {
+    const { MapContainer, TileLayer, Marker, Popup, Polygon } = mod;
+    return function CertificateMap({ center, zoom, farmData, farmerName }) {
+      const position = center || [9.0765, 7.3986];
+      
+      return (
+        <MapContainer 
+          center={position} 
+          zoom={zoom || 10} 
+          style={{ height: '100%', width: '100%' }}
+          scrollWheelZoom={false}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          
+          {/* Farm marker */}
+          {center && (
+            <Marker position={position}>
+              <Popup>
+                <div>
+                  <h3 className="font-bold">{farmerName}'s Farm</h3>
+                  {farmData && (
+                    <div className="text-sm">
+                      <p>Size: {farmData.farmSize} hectares</p>
+                      <p>Crop: {farmData.primaryCrop}</p>
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          )}
+          
+          {/* Farm polygon if available */}
+          {farmData?.farmPolygon && Array.isArray(farmData.farmPolygon) && (
+            <Polygon 
+              positions={farmData.farmPolygon.map(coord => [coord[1], coord[0]])} // Convert [lng, lat] to [lat, lng]
+              color="#10B981"
+              fillColor="#10B981"
+              fillOpacity={0.3}
+            />
+          )}
+        </MapContainer>
+      );
+    };
+  }),
+  { 
+    ssr: false,
+    loading: () => <div className="h-full bg-gray-100 rounded-lg flex items-center justify-center">Loading map...</div>
+  }
+);
 
 export default function VerifyCertificate() {
   const router = useRouter();
@@ -41,6 +106,10 @@ export default function VerifyCertificate() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   if (loading) {
@@ -84,18 +153,33 @@ export default function VerifyCertificate() {
       <Head>
         <title>Certificate Verification - {certificate?.farmer?.firstName} {certificate?.farmer?.lastName} - CCSA</title>
         <meta name="description" content={`Verified certificate for ${certificate?.farmer?.firstName} ${certificate?.farmer?.lastName} - Climate-Smart Agriculture Program`} />
+        <link 
+          rel="stylesheet" 
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossOrigin=""
+        />
       </Head>
 
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Verification Status */}
           <div className="bg-white rounded-lg shadow-lg mb-8 p-6">
-            <div className="flex items-center justify-center mb-6">
-              <CheckCircle className="h-16 w-16 text-green-500 mr-4" />
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Certificate Verified</h1>
-                <p className="text-gray-600">This certificate is authentic and valid</p>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <CheckCircle className="h-16 w-16 text-green-500 mr-4" />
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Certificate Verified</h1>
+                  <p className="text-gray-600">This certificate is authentic and valid</p>
+                </div>
               </div>
+              <button
+                onClick={handlePrint}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors print:hidden"
+              >
+                <Printer className="h-5 w-5 mr-2" />
+                Print Certificate
+              </button>
             </div>
             
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
@@ -116,7 +200,7 @@ export default function VerifyCertificate() {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Full Name</label>
                   <p className="text-lg font-semibold text-gray-900">
-                    {certificate.farmer.firstName} {certificate.farmer.middleName} {certificate.farmer.lastName}
+                    {formatFullName(certificate.farmer.firstName, certificate.farmer.middleName, certificate.farmer.lastName)}
                   </p>
                 </div>
                 
@@ -127,7 +211,7 @@ export default function VerifyCertificate() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Gender</label>
-                    <p className="text-gray-900">{certificate.farmer.gender || 'Not specified'}</p>
+                    <p className="text-gray-900">{toTitleCase(certificate.farmer.gender) || 'Not specified'}</p>
                   </div>
                 </div>
 
@@ -144,13 +228,20 @@ export default function VerifyCertificate() {
                 </div>
 
                 <div>
+                  <label className="text-sm font-medium text-gray-500">Total Farms</label>
+                  <p className="text-blue-600 font-semibold">
+                    {certificate.farmer.totalFarms} farm{certificate.farmer.totalFarms !== 1 ? 's' : ''}
+                  </p>
+                </div>
+
+                <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                     certificate.farmer.status === 'active' 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-yellow-100 text-yellow-800'
                   }`}>
-                    {certificate.farmer.status}
+                    {toTitleCase(certificate.farmer.status)}
                   </span>
                 </div>
               </div>
@@ -166,23 +257,30 @@ export default function VerifyCertificate() {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">State</label>
-                  <p className="text-lg font-semibold text-gray-900">{certificate.farmer.state}</p>
+                  <p className="text-lg font-semibold text-gray-900">{formatLocation(certificate.farmer.state)}</p>
                 </div>
                 
                 <div>
                   <label className="text-sm font-medium text-gray-500">Local Government Area</label>
-                  <p className="text-gray-900">{certificate.farmer.lga}</p>
+                  <p className="text-gray-900">{formatLocation(certificate.farmer.lga)}</p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-gray-500">Ward</label>
-                  <p className="text-gray-900">{certificate.farmer.ward || 'Not specified'}</p>
+                  <p className="text-gray-900">{formatLocation(certificate.farmer.ward) || 'Not specified'}</p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-gray-500">Address</label>
                   <p className="text-gray-900">{certificate.farmer.address || 'Not provided'}</p>
                 </div>
+
+                {certificate.farmer.pollingUnit && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Polling Unit</label>
+                    <p className="text-gray-900">{formatLocation(certificate.farmer.pollingUnit)}</p>
+                  </div>
+                )}
 
                 {certificate.farmer.latitude && certificate.farmer.longitude && (
                   <div>
@@ -213,22 +311,22 @@ export default function VerifyCertificate() {
                   
                   <div>
                     <label className="text-sm font-medium text-gray-500">Primary Crop</label>
-                    <p className="text-gray-900">{certificate.farm.primaryCrop}</p>
+                    <p className="text-gray-900">{formatCropName(certificate.farm.primaryCrop)}</p>
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-gray-500">Secondary Crop</label>
-                    <p className="text-gray-900">{certificate.farm.secondaryCrop || 'None'}</p>
+                    <p className="text-gray-900">{formatCropName(certificate.farm.secondaryCrop) || 'None'}</p>
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-gray-500">Farm Ownership</label>
-                    <p className="text-gray-900">{certificate.farm.farmOwnership}</p>
+                    <p className="text-gray-900">{toTitleCase(certificate.farm.farmOwnership)}</p>
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-gray-500">Farming Season</label>
-                    <p className="text-gray-900">{certificate.farm.farmingSeason}</p>
+                    <p className="text-gray-900">{toTitleCase(certificate.farm.farmingSeason)}</p>
                   </div>
 
                   <div>
@@ -238,12 +336,12 @@ export default function VerifyCertificate() {
 
                   <div>
                     <label className="text-sm font-medium text-gray-500">Soil Type</label>
-                    <p className="text-gray-900">{certificate.farm.soilType}</p>
+                    <p className="text-gray-900">{toTitleCase(certificate.farm.soilType)}</p>
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-gray-500">Soil Fertility</label>
-                    <p className="text-gray-900">{certificate.farm.soilFertility}</p>
+                    <p className="text-gray-900">{toTitleCase(certificate.farm.soilFertility)}</p>
                   </div>
 
                   <div>
@@ -262,6 +360,43 @@ export default function VerifyCertificate() {
                 )}
               </div>
             )}
+          
+          {/* Farm Map */}
+          {certificate.farm && (certificate.farm.farmPolygon || certificate.farm.farmCoordinates || 
+            (certificate.farm.farmLatitude && certificate.farm.farmLongitude)) && (
+            <div className="bg-white rounded-lg shadow-lg mt-8 p-6 print:hidden">
+              <div className="flex items-center mb-6">
+                <MapPin className="h-6 w-6 text-green-600 mr-2" />
+                <h2 className="text-xl font-bold text-gray-900">Farm Location</h2>
+              </div>
+              
+              <div className="h-96 rounded-lg overflow-hidden">
+                <DynamicMap
+                  center={
+                    certificate.farm.farmLatitude && certificate.farm.farmLongitude
+                      ? [certificate.farm.farmLatitude, certificate.farm.farmLongitude]
+                      : (certificate.farmer.latitude && certificate.farmer.longitude
+                          ? [certificate.farmer.latitude, certificate.farmer.longitude]
+                          : null)
+                  }
+                  zoom={15}
+                  farmData={certificate.farm}
+                  farmerName={`${certificate.farmer.firstName} ${certificate.farmer.lastName}`}
+                />
+              </div>
+              
+              {certificate.farm.farmPolygon && (
+                <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                  <p className="text-sm text-green-700">
+                    <strong>Farm Area:</strong> {certificate.farm.farmSize} hectares
+                    {certificate.farm.coordinateSystem && (
+                      <span className="ml-2">({certificate.farm.coordinateSystem})</span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
           </div>
 
           {/* Certificate Information */}
@@ -306,6 +441,28 @@ export default function VerifyCertificate() {
           </div>
         </div>
       </div>
+
+      {/* Print styles */}
+      <style jsx>{`
+        @media print {
+          .print\\:hidden {
+            display: none !important;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+          }
+          .shadow-lg {
+            box-shadow: none !important;
+            border: 1px solid #e5e7eb;
+          }
+          .bg-gray-50 {
+            background-color: white !important;
+          }
+          .rounded-lg {
+            border-radius: 0.5rem;
+          }
+        }
+      `}</style>
     </Layout>
   );
 }

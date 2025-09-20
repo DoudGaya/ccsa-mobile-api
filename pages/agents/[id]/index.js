@@ -13,22 +13,35 @@ import {
   ChartBarIcon,
   MapPinIcon,
   EyeIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline'
 
 export default function AgentDetails() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { id } = router.query
+  
+  // State management
   const [agent, setAgent] = useState(null)
   const [stats, setStats] = useState({
     totalFarmers: 0,
     activeFarmers: 0,
     recentRegistrations: 0
   })
+  const [attendance, setAttendance] = useState([])
+  const [attendanceStats, setAttendanceStats] = useState({
+    totalDays: 0,
+    presentDays: 0,
+    missedDays: 0,
+    attendanceRate: 0
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Effects
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin')
@@ -37,20 +50,20 @@ export default function AgentDetails() {
 
     if (id && session) {
       fetchAgentDetails()
+      fetchAttendanceData()
     }
   }, [id, session, status])
 
+  // API Functions
   const fetchAgentDetails = async () => {
     try {
       setLoading(true)
       
-      // Use the real API first - this should fetch actual database data with farmers
+      // Try the primary API endpoint first
       let response = await fetch(`/api/agents/${id}`)
       
       if (response.ok) {
         const data = await response.json()
-        
-        // The API returns agent data directly with farmers included
         setAgent(data)
         
         // Set stats from the real data
@@ -60,7 +73,7 @@ export default function AgentDetails() {
           recentRegistrations: data.farmerStats?.activeThisWeek || 0
         })
       } else {
-        // Only use fallback if real API fails
+        // Fallback to secondary API endpoint
         const fallbackResponse = await fetch(`/api/agents-details/${id}`)
         if (fallbackResponse.ok) {
           const fallbackData = await fallbackResponse.json()
@@ -75,12 +88,63 @@ export default function AgentDetails() {
         }
       }
     } catch (error) {
+      console.error('Error fetching agent details:', error)
       setError('Failed to load agent details')
     } finally {
       setLoading(false)
     }
   }
 
+  const fetchAttendanceData = async () => {
+    try {
+      const response = await fetch(`/api/attendance?agentId=${id}&limit=30`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        const records = data.records || []
+        setAttendance(records)
+        
+        // Calculate attendance statistics
+        const totalDays = records.length
+        const presentDays = records.filter(record => 
+          record.checkInTime && record.checkOutTime
+        ).length
+        const missedDays = Math.max(0, 30 - totalDays)
+        const attendanceRate = totalDays > 0 ? ((presentDays / Math.max(totalDays, 30)) * 100) : 0
+        
+        setAttendanceStats({
+          totalDays,
+          presentDays,
+          missedDays,
+          attendanceRate: Math.round(attendanceRate)
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch attendance data:', error)
+    }
+  }
+
+  // Helper functions
+  const capitalizeFirstLetter = (string) => {
+    if (!string) return ''
+    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase()
+  }
+
+  const calculateHoursWorked = (checkIn, checkOut) => {
+    if (!checkIn || !checkOut) return 'N/A'
+    const checkInTime = new Date(checkIn)
+    const checkOutTime = new Date(checkOut)
+    const hours = (checkOutTime - checkInTime) / (1000 * 60 * 60)
+    return hours.toFixed(1)
+  }
+
+  const getAttendanceStatus = (record) => {
+    if (record.checkOutTime) return { status: 'Complete', color: 'green' }
+    if (record.checkInTime) return { status: 'In Progress', color: 'yellow' }
+    return { status: 'Absent', color: 'red' }
+  }
+
+  // Loading state
   if (status === 'loading' || loading) {
     return (
       <Layout title="Agent Details">
@@ -98,11 +162,13 @@ export default function AgentDetails() {
     )
   }
 
+  // Error state
   if (error) {
     return (
       <Layout title="Agent Details">
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <div className="flex">
+            <XCircleIcon className="h-5 w-5 text-red-400" />
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">Error</h3>
               <div className="mt-2 text-sm text-red-700">{error}</div>
@@ -113,6 +179,7 @@ export default function AgentDetails() {
     )
   }
 
+  // Agent not found state
   if (!agent) {
     return (
       <Layout title="Agent Details">
@@ -125,10 +192,11 @@ export default function AgentDetails() {
     )
   }
 
+  // Main render
   return (
     <Layout title={agent.displayName || `${agent.firstName} ${agent.lastName}`}>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Header Section */}
         <div className="bg-white shadow rounded-lg">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -159,8 +227,9 @@ export default function AgentDetails() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Agent Information */}
+          {/* Main Content */}
           <div className="lg:col-span-2">
+            {/* Agent Information */}
             <div className="bg-white shadow rounded-lg">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h2 className="text-lg font-medium text-gray-900">Agent Information</h2>
@@ -250,7 +319,7 @@ export default function AgentDetails() {
                   </div>
                   <div className="bg-green-50 rounded-lg p-4">
                     <div className="flex items-center">
-                      <UsersIcon className="h-8 w-8 text-green-600" />
+                      <CheckCircleIcon className="h-8 w-8 text-green-600" />
                       <div className="ml-4">
                         <p className="text-sm font-medium text-green-600">Active Farmers</p>
                         <p className="text-2xl font-bold text-green-900">{stats.activeFarmers}</p>
@@ -270,7 +339,7 @@ export default function AgentDetails() {
               </div>
             </div>
 
-            {/* Registered Farmers */}
+            {/* Registered Farmers Table */}
             {agent.farmers && agent.farmers.length > 0 && (
               <div className="bg-white shadow rounded-lg mt-6">
                 <div className="px-6 py-4 border-b border-gray-200">
@@ -315,7 +384,7 @@ export default function AgentDetails() {
                                 </div>
                                 <div className="ml-3">
                                   <div className="text-sm font-medium text-gray-900">
-                                    {(farmer.firstName || '').charAt(0).toUpperCase() + (farmer.firstName || '').slice(1).toLowerCase()} {(farmer.lastName || '').charAt(0).toUpperCase() + (farmer.lastName || '').slice(1).toLowerCase()}
+                                    {capitalizeFirstLetter(farmer.firstName)} {capitalizeFirstLetter(farmer.lastName)}
                                   </div>
                                   <div className="text-sm text-gray-500">
                                     NIN: {farmer.nin}
@@ -331,10 +400,10 @@ export default function AgentDetails() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-900">
-                                {(farmer.state || '').charAt(0).toUpperCase() + (farmer.state || '').slice(1).toLowerCase()}
+                                {capitalizeFirstLetter(farmer.state)}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {(farmer.lga || '').charAt(0).toUpperCase() + (farmer.lga || '').slice(1).toLowerCase()}
+                                {capitalizeFirstLetter(farmer.lga)}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -343,7 +412,7 @@ export default function AgentDetails() {
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-red-100 text-red-800'
                               }`}>
-                                {(farmer.status || 'active').charAt(0).toUpperCase() + (farmer.status || 'active').slice(1).toLowerCase()}
+                                {capitalizeFirstLetter(farmer.status || 'active')}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -375,7 +444,7 @@ export default function AgentDetails() {
                     </table>
                   </div>
                   
-                  {/* Show "View All" link if there are many farmers */}
+                  {/* View All Link */}
                   {agent.farmers.length >= 10 && (
                     <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
                       <Link 
@@ -405,6 +474,100 @@ export default function AgentDetails() {
                 </div>
               </div>
             )}
+
+            {/* Attendance Records */}
+            <div className="bg-white shadow rounded-lg mt-6">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-medium text-gray-900">
+                  Recent Attendance Records ({attendance.length})
+                </h2>
+              </div>
+              
+              {attendance.length > 0 ? (
+                <div className="overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Check-in Time
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Check-out Time
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Hours Worked
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Location
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {attendance.map((record) => {
+                          const checkInTime = record.checkInTime ? new Date(record.checkInTime) : null;
+                          const checkOutTime = record.checkOutTime ? new Date(record.checkOutTime) : null;
+                          const hoursWorked = calculateHoursWorked(record.checkInTime, record.checkOutTime);
+                          const attendanceStatus = getAttendanceStatus(record);
+                          
+                          return (
+                            <tr key={record.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {checkInTime ? checkInTime.toLocaleDateString() : 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {checkInTime ? checkInTime.toLocaleTimeString() : 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {checkOutTime ? checkOutTime.toLocaleTimeString() : 'Still working'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {hoursWorked} {hoursWorked !== 'N/A' ? 'hours' : ''}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {record.checkInLocation && (
+                                  <div className="flex items-center">
+                                    <MapPinIcon className="h-4 w-4 mr-1" />
+                                    <span className="truncate max-w-xs">
+                                      {record.checkInLocation.latitude?.toFixed(4)}, {record.checkInLocation.longitude?.toFixed(4)}
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  attendanceStatus.color === 'green' 
+                                    ? 'bg-green-100 text-green-800'
+                                    : attendanceStatus.color === 'yellow'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {attendanceStatus.status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="px-6 py-12 text-center">
+                  <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No attendance records</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    This agent hasn't logged any attendance yet.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Sidebar */}
@@ -471,12 +634,6 @@ export default function AgentDetails() {
                   <PencilIcon className="h-4 w-4 mr-2" />
                   Edit Agent
                 </Link>
-                {/* <button className="w-full btn-secondary">
-                  View Farmers
-                </button>
-                <button className="w-full btn-secondary">
-                  Generate Report
-                </button> */}
                 <button className={`w-full ${agent.isActive ? 'btn-danger' : 'btn-success'}`}>
                   {agent.isActive ? 'Deactivate' : 'Activate'} Agent
                 </button>

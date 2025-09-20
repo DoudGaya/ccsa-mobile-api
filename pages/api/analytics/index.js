@@ -1,5 +1,5 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
-import { prisma } from '../../../lib/prisma';
+import prisma from '../../../lib/prisma';
 import { getSession } from 'next-auth/react';
 
 async function handler(req, res) {

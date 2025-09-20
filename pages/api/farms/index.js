@@ -1,9 +1,7 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../../lib/prisma';
 import { getSession } from 'next-auth/react';
 import { updateFarmerStatusByFarms } from '../../../lib/farmerStatusUtils';
-
-const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
   // Enable CORS

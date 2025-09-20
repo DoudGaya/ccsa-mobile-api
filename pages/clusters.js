@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
+import LocationSelect from '../components/LocationSelect'
 import {
   PlusIcon,
   PencilIcon,
@@ -23,6 +24,10 @@ export default function Clusters() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedCluster, setSelectedCluster] = useState(null)
+  const [selectedState, setSelectedState] = useState('')
+  const [selectedLGA, setSelectedLGA] = useState('')
+  const [selectedWard, setSelectedWard] = useState('')
+  const [selectedPollingUnit, setSelectedPollingUnit] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -30,6 +35,23 @@ export default function Clusters() {
     clusterLeadLastName: '',
     clusterLeadEmail: '',
     clusterLeadPhone: '',
+    clusterLeadNIN: '',
+    clusterLeadState: '',
+    clusterLeadLGA: '',
+    clusterLeadWard: '',
+    clusterLeadPollingUnit: '',
+    clusterLeadPosition: '',
+    clusterLeadAddress: '',
+    clusterLeadDateOfBirth: '',
+    clusterLeadGender: '',
+    clusterLeadMaritalStatus: '',
+    clusterLeadEmploymentStatus: '',
+    clusterLeadBVN: '',
+    clusterLeadBankName: '',
+    clusterLeadAccountNumber: '',
+    clusterLeadAccountName: '',
+    clusterLeadAlternativePhone: '',
+    clusterLeadWhatsAppNumber: '',
   })
   const [formErrors, setFormErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -139,7 +161,29 @@ export default function Clusters() {
       clusterLeadLastName: cluster.clusterLeadLastName,
       clusterLeadEmail: cluster.clusterLeadEmail,
       clusterLeadPhone: cluster.clusterLeadPhone,
+      clusterLeadNIN: cluster.clusterLeadNIN || '',
+      clusterLeadState: cluster.clusterLeadState || '',
+      clusterLeadLGA: cluster.clusterLeadLGA || '',
+      clusterLeadWard: cluster.clusterLeadWard || '',
+      clusterLeadPollingUnit: cluster.clusterLeadPollingUnit || '',
+      clusterLeadPosition: cluster.clusterLeadPosition || '',
+      clusterLeadAddress: cluster.clusterLeadAddress || '',
+      clusterLeadDateOfBirth: cluster.clusterLeadDateOfBirth || '',
+      clusterLeadGender: cluster.clusterLeadGender || '',
+      clusterLeadMaritalStatus: cluster.clusterLeadMaritalStatus || '',
+      clusterLeadEmploymentStatus: cluster.clusterLeadEmploymentStatus || '',
+      clusterLeadBVN: cluster.clusterLeadBVN || '',
+      clusterLeadBankName: cluster.clusterLeadBankName || '',
+      clusterLeadAccountNumber: cluster.clusterLeadAccountNumber || '',
+      clusterLeadAccountName: cluster.clusterLeadAccountName || '',
+      clusterLeadAlternativePhone: cluster.clusterLeadAlternativePhone || '',
+      clusterLeadWhatsAppNumber: cluster.clusterLeadWhatsAppNumber || '',
     })
+    // Set location states for editing
+    setSelectedState(cluster.clusterLeadState || '')
+    setSelectedLGA(cluster.clusterLeadLGA || '')
+    setSelectedWard(cluster.clusterLeadWard || '')
+    setSelectedPollingUnit(cluster.clusterLeadPollingUnit || '')
     setFormErrors({})
     setShowEditModal(true)
   }
@@ -166,6 +210,51 @@ export default function Clusters() {
     }
   }
 
+  // Location selection handlers
+  const handleStateChange = (state) => {
+    setSelectedState(state)
+    setSelectedLGA('')
+    setSelectedWard('')
+    setSelectedPollingUnit('')
+    setFormData({
+      ...formData,
+      clusterLeadState: state,
+      clusterLeadLGA: '',
+      clusterLeadWard: '',
+      clusterLeadPollingUnit: ''
+    })
+  }
+
+  const handleLGAChange = (lga) => {
+    setSelectedLGA(lga)
+    setSelectedWard('')
+    setSelectedPollingUnit('')
+    setFormData({
+      ...formData,
+      clusterLeadLGA: lga,
+      clusterLeadWard: '',
+      clusterLeadPollingUnit: ''
+    })
+  }
+
+  const handleWardChange = (ward) => {
+    setSelectedWard(ward)
+    setSelectedPollingUnit('')
+    setFormData({
+      ...formData,
+      clusterLeadWard: ward,
+      clusterLeadPollingUnit: ''
+    })
+  }
+
+  const handlePollingUnitChange = (pollingUnit) => {
+    setSelectedPollingUnit(pollingUnit)
+    setFormData({
+      ...formData,
+      clusterLeadPollingUnit: pollingUnit
+    })
+  }
+
   const resetForm = () => {
     setFormData({
       title: '',
@@ -174,7 +263,28 @@ export default function Clusters() {
       clusterLeadLastName: '',
       clusterLeadEmail: '',
       clusterLeadPhone: '',
+      clusterLeadNIN: '',
+      clusterLeadState: '',
+      clusterLeadLGA: '',
+      clusterLeadWard: '',
+      clusterLeadPollingUnit: '',
+      clusterLeadPosition: '',
+      clusterLeadAddress: '',
+      clusterLeadDateOfBirth: '',
+      clusterLeadGender: '',
+      clusterLeadMaritalStatus: '',
+      clusterLeadEmploymentStatus: '',
+      clusterLeadBVN: '',
+      clusterLeadBankName: '',
+      clusterLeadAccountNumber: '',
+      clusterLeadAccountName: '',
+      clusterLeadAlternativePhone: '',
+      clusterLeadWhatsAppNumber: '',
     })
+    setSelectedState('')
+    setSelectedLGA('')
+    setSelectedWard('')
+    setSelectedPollingUnit('')
     setFormErrors({})
     setSelectedCluster(null)
   }
@@ -449,6 +559,230 @@ export default function Clusters() {
                   {formErrors.clusterLeadPhone && (
                     <p className="mt-1 text-sm text-red-600">{formErrors.clusterLeadPhone}</p>
                   )}
+                </div>
+
+                {/* Cluster Lead Additional Information */}
+                <div className="border-t border-gray-200 pt-4">
+                  <h4 className="text-lg font-medium text-gray-900 mb-4">Additional Cluster Lead Information</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* NIN */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        NIN (National Identification Number)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.clusterLeadNIN}
+                        onChange={(e) => setFormData({ ...formData, clusterLeadNIN: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="12345678901"
+                        maxLength="11"
+                      />
+                    </div>
+
+                    {/* Position */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Position/Title
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.clusterLeadPosition}
+                        onChange={(e) => setFormData({ ...formData, clusterLeadPosition: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="e.g., Head of Agriculture"
+                      />
+                    </div>
+
+                    {/* Location Selection */}
+                    <div className="lg:col-span-2">
+                      <h4 className="text-lg font-medium text-gray-900 mb-4">Location Information</h4>
+                      <LocationSelect
+                        selectedState={selectedState}
+                        selectedLGA={selectedLGA}
+                        selectedWard={selectedWard}
+                        onStateChange={handleStateChange}
+                        onLGAChange={handleLGAChange}
+                        onWardChange={handleWardChange}
+                        onPollingUnitChange={handlePollingUnitChange}
+                        errors={formErrors}
+                        required={false}
+                      />
+                    </div>
+
+                    {/* Date of Birth */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.clusterLeadDateOfBirth}
+                        onChange={(e) => setFormData({ ...formData, clusterLeadDateOfBirth: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Gender */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Gender
+                      </label>
+                      <select
+                        value={formData.clusterLeadGender}
+                        onChange={(e) => setFormData({ ...formData, clusterLeadGender: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+
+                    {/* Marital Status */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Marital Status
+                      </label>
+                      <select
+                        value={formData.clusterLeadMaritalStatus}
+                        onChange={(e) => setFormData({ ...formData, clusterLeadMaritalStatus: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Status</option>
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                        <option value="Divorced">Divorced</option>
+                        <option value="Widowed">Widowed</option>
+                      </select>
+                    </div>
+
+                    {/* Employment Status */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Employment Status
+                      </label>
+                      <select
+                        value={formData.clusterLeadEmploymentStatus}
+                        onChange={(e) => setFormData({ ...formData, clusterLeadEmploymentStatus: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Status</option>
+                        <option value="Employed">Employed</option>
+                        <option value="Self-Employed">Self-Employed</option>
+                        <option value="Unemployed">Unemployed</option>
+                        <option value="Retired">Retired</option>
+                        <option value="Student">Student</option>
+                      </select>
+                    </div>
+
+                    {/* Alternative Phone */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Alternative Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.clusterLeadAlternativePhone}
+                        onChange={(e) => setFormData({ ...formData, clusterLeadAlternativePhone: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="+234 800 000 0000"
+                      />
+                    </div>
+
+                    {/* WhatsApp Number */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        WhatsApp Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.clusterLeadWhatsAppNumber}
+                        onChange={(e) => setFormData({ ...formData, clusterLeadWhatsAppNumber: e.target.value })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="+234 800 000 0000"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Address - Full Width */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Address
+                    </label>
+                    <textarea
+                      value={formData.clusterLeadAddress}
+                      onChange={(e) => setFormData({ ...formData, clusterLeadAddress: e.target.value })}
+                      rows={3}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Full residential address"
+                    />
+                  </div>
+
+                  {/* Banking Information */}
+                  <div className="border-t border-gray-200 pt-4 mt-4">
+                    <h5 className="text-md font-medium text-gray-800 mb-3">Banking Information</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* BVN */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          BVN (Bank Verification Number)
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.clusterLeadBVN}
+                          onChange={(e) => setFormData({ ...formData, clusterLeadBVN: e.target.value })}
+                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="12345678901"
+                          maxLength="11"
+                        />
+                      </div>
+
+                      {/* Bank Name */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Bank Name
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.clusterLeadBankName}
+                          onChange={(e) => setFormData({ ...formData, clusterLeadBankName: e.target.value })}
+                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="e.g., First Bank of Nigeria"
+                        />
+                      </div>
+
+                      {/* Account Number */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Account Number
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.clusterLeadAccountNumber}
+                          onChange={(e) => setFormData({ ...formData, clusterLeadAccountNumber: e.target.value })}
+                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="1234567890"
+                          maxLength="10"
+                        />
+                      </div>
+
+                      {/* Account Name */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Account Name
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.clusterLeadAccountName}
+                          onChange={(e) => setFormData({ ...formData, clusterLeadAccountName: e.target.value })}
+                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Account holder name"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-3 pt-4">

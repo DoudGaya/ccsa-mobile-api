@@ -26,7 +26,14 @@ export default function SignIn() {
       })
 
       if (result?.error) {
-        setError('Invalid email or password')
+        // Handle different types of errors
+        if (result.error === 'CredentialsSignin') {
+          setError('Invalid email or password')
+        } else if (result.error.includes('not authorized')) {
+          setError('This email is not authorized to access the system. Please contact the administrator.')
+        } else {
+          setError('Authentication failed. Please try again.')
+        }
       } else {
         router.push('/dashboard')
       }
@@ -126,6 +133,15 @@ export default function SignIn() {
                   'Sign in'
                 )}
               </button>
+            </div>
+
+            <div className="text-center">
+              <a
+                href="/auth/forgot-password"
+                className="text-sm text-ccsa-blue hover:text-ccsa-blue/80"
+              >
+                Forgot your password?
+              </a>
             </div>
 
           

@@ -258,6 +258,7 @@ async function createFarmer(req, res) {
       whatsAppNumber: contactInfo.whatsAppNumber || null,
       address: contactInfo.address,
       ward: contactInfo.ward,
+      pollingUnit: contactInfo.pollingUnit || null, // Add polling unit
       latitude: contactInfo.coordinates?.latitude,
       longitude: contactInfo.coordinates?.longitude,
       // Bank info

@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../../../lib/prisma';
 import ProductionLogger from '../../../../lib/productionLogger'
-
-const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -57,11 +55,13 @@ export default async function handler(req, res) {
         state: certificate.farmer.state,
         lga: certificate.farmer.lga,
         ward: certificate.farmer.ward,
+        pollingUnit: certificate.farmer.pollingUnit,
         address: certificate.farmer.address,
         latitude: certificate.farmer.latitude,
         longitude: certificate.farmer.longitude,
         registrationDate: certificate.farmer.registrationDate,
-        status: certificate.farmer.status
+        status: certificate.farmer.status,
+        totalFarms: certificate.farmer.farms.length
       },
       farm: certificate.farmer.farms[0] ? {
         farmSize: certificate.farmer.farms[0].farmSize,
@@ -75,6 +75,9 @@ export default async function handler(req, res) {
         farmingExperience: certificate.farmer.farms[0].farmingExperience,
         farmLatitude: certificate.farmer.farms[0].farmLatitude,
         farmLongitude: certificate.farmer.farms[0].farmLongitude,
+        farmPolygon: certificate.farmer.farms[0].farmPolygon,
+        farmCoordinates: certificate.farmer.farms[0].farmCoordinates,
+        coordinateSystem: certificate.farmer.farms[0].coordinateSystem,
         soilType: certificate.farmer.farms[0].soilType,
         soilFertility: certificate.farmer.farms[0].soilFertility,
         year: certificate.farmer.farms[0].year,
@@ -90,7 +93,5 @@ export default async function handler(req, res) {
   } catch (error) {
     ProductionLogger.error('Certificate verification error:', error);
     res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    await prisma.$disconnect();
   }
 }

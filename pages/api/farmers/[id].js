@@ -114,6 +114,9 @@ async function getFarmer(req, res, id) {
 
 async function updateFarmer(req, res, id) {
   try {
+    ProductionLogger.debug(`Updating farmer data for ID: ${id}`);
+    ProductionLogger.debug('Request body:', req.body);
+
     const { referees, ...farmerData } = req.body;
 
     // Check if farmer exists
@@ -123,45 +126,80 @@ async function updateFarmer(req, res, id) {
     });
 
     if (!existingFarmer) {
+      ProductionLogger.warn(`Farmer not found for update: ${id}`);
       return res.status(404).json({ error: 'Farmer not found' });
     }
 
-    // Validate farmer data
-    const validatedFarmer = farmerSchema.parse(farmerData);
+    // Clean up the data: convert empty strings to null/undefined and filter out undefined values
+    const cleanedData = {};
+    for (const [key, value] of Object.entries(farmerData)) {
+      if (value === '' || value === null) {
+        // Skip empty strings and null values for optional fields
+        if (!['nin', 'firstName', 'lastName', 'phone'].includes(key)) {
+          continue;
+        } else {
+          // For required fields, keep empty strings so validation can catch them
+          cleanedData[key] = value;
+        }
+      } else if (value !== undefined) {
+        cleanedData[key] = value;
+      }
+    }
 
-    // Clean up the data to remove undefined values that could cause issues
-    const cleanedData = Object.fromEntries(
+    ProductionLogger.debug('Cleaned data for validation:', cleanedData);
+
+    // Validate farmer data
+    let validatedFarmer;
+    try {
+      validatedFarmer = farmerSchema.parse(cleanedData);
+    } catch (validationError) {
+      ProductionLogger.error('Validation error:', validationError.errors);
+      return res.status(400).json({ 
+        error: 'Validation error', 
+        details: validationError.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }))
+      });
+    }
+
+    // Check for unique constraints (excluding current farmer)
+    const constraints = [];
+    if (validatedFarmer.nin) constraints.push({ nin: validatedFarmer.nin });
+    if (validatedFarmer.phone) constraints.push({ phone: validatedFarmer.phone });
+    if (validatedFarmer.email) constraints.push({ email: validatedFarmer.email });
+    if (validatedFarmer.bvn) constraints.push({ bvn: validatedFarmer.bvn });
+
+    if (constraints.length > 0) {
+      const duplicateFarmer = await prisma.farmer.findFirst({
+        where: {
+          AND: [
+            { id: { not: id } },
+            { OR: constraints },
+          ],
+        },
+      });
+
+      if (duplicateFarmer) {
+        ProductionLogger.warn(`Duplicate farmer found during update for: ${id}`);
+        return res.status(409).json({ 
+          error: 'Another farmer already exists with the same NIN, phone, email, or BVN' 
+        });
+      }
+    }
+
+    // Remove undefined values from the final data
+    const finalData = Object.fromEntries(
       Object.entries(validatedFarmer).filter(([_, value]) => value !== undefined)
     );
 
-    // Check for unique constraints (excluding current farmer)
-    const duplicateFarmer = await prisma.farmer.findFirst({
-      where: {
-        AND: [
-          { id: { not: id } },
-          {
-            OR: [
-              { nin: cleanedData.nin },
-              { phone: cleanedData.phone },
-              ...(cleanedData.email ? [{ email: cleanedData.email }] : []),
-              ...(cleanedData.bvn ? [{ bvn: cleanedData.bvn }] : []),
-            ],
-          },
-        ],
-      },
-    });
-
-    if (duplicateFarmer) {
-      return res.status(409).json({ 
-        error: 'Another farmer already exists with the same NIN, phone, email, or BVN' 
-      });
-    }
+    ProductionLogger.debug('Final data for database update:', finalData);
 
     // Update farmer
     const farmer = await prisma.farmer.update({
       where: { id },
       data: {
-        ...cleanedData,
+        ...finalData,
         referees: {
           deleteMany: {},
           create: referees?.map(referee => ({
@@ -185,9 +223,11 @@ async function updateFarmer(req, res, id) {
       },
     });
 
+    ProductionLogger.debug(`Successfully updated farmer: ${farmer.firstName} ${farmer.lastName}`);
     return res.status(200).json(farmer);
   } catch (error) {
-    console.error('Error updating farmer:', error);
+    ProductionLogger.error('Error updating farmer:', error);
+    console.error('Full error details:', error);
     
     if (error.name === 'ZodError') {
       return res.status(400).json({ 
@@ -196,7 +236,10 @@ async function updateFarmer(req, res, id) {
       });
     }
     
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 

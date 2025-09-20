@@ -4,12 +4,14 @@ import { useRouter } from 'next/router'
 import Layout from '../../components/Layout'
 import Link from 'next/link'
 import { usePermissions, PermissionGate, PERMISSIONS } from '../../components/PermissionProvider'
+import hierarchicalData from '../../data/hierarchical-data'
 import { 
   MagnifyingGlassIcon as SearchIcon,
   EyeIcon,
   DocumentTextIcon,
   PencilIcon,
-  FunnelIcon as FilterIcon 
+  FunnelIcon as FilterIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 
 export default function Farmers() {
@@ -235,6 +237,104 @@ export default function Farmers() {
     }
   }
 
+  // Excel export function
+  const exportToExcel = async () => {
+    try {
+      // Get all farmers data for export (not just current page)
+      const params = new URLSearchParams({
+        limit: '10000', // Large number to get all farmers
+      })
+      
+      // Add current filters to export
+      if (filters.status && filters.status !== 'all') {
+        params.append('status', filters.status)
+      }
+      if (filters.state) {
+        params.append('state', filters.state)
+      }
+      if (filters.gender) {
+        params.append('gender', filters.gender)
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm)
+      }
+
+      const response = await fetch(`/api/farmers?${params}`)
+      let allFarmers = []
+      
+      if (response.ok) {
+        const data = await response.json()
+        allFarmers = data.farmers || []
+      } else {
+        // Fallback to current farmers if API fails
+        allFarmers = farmers
+      }
+
+      const dataToExport = allFarmers.map(farmer => ({
+        'Farmer ID': farmer.id,
+        'First Name': farmer.firstName || '',
+        'Last Name': farmer.lastName || '',
+        'NIN': farmer.nin || '',
+        'Phone Number': farmer.phoneNumber || '',
+        'Email': farmer.email || '',
+        'Gender': farmer.gender || '',
+        'Date of Birth': farmer.dateOfBirth ? new Date(farmer.dateOfBirth).toLocaleDateString() : '',
+        'State': farmer.state || '',
+        'LGA': farmer.lga || '',
+        'Ward': farmer.ward || '',
+        'Status': farmer.status || '',
+        'Agent ID': farmer.agentId || '',
+        'Registration Date': farmer.createdAt ? new Date(farmer.createdAt).toLocaleDateString() : '',
+        'Last Updated': farmer.updatedAt ? new Date(farmer.updatedAt).toLocaleDateString() : '',
+        'Total Farms': farmer.farms?.length || 0,
+        'Bank Name': farmer.bankName || '',
+        'Account Number': farmer.accountNumber || '',
+        'BVN': farmer.bvn || ''
+      }))
+
+      // Convert to CSV format
+      const csvContent = convertToCSV(dataToExport)
+      downloadCSV(csvContent, `farmers_export_${new Date().toISOString().split('T')[0]}.csv`)
+    } catch (error) {
+      console.error('Error exporting farmers:', error)
+      alert('Error exporting data')
+    }
+  }
+
+  const convertToCSV = (data) => {
+    if (data.length === 0) return ''
+    
+    const headers = Object.keys(data[0])
+    const csvHeaders = headers.join(',')
+    
+    const csvRows = data.map(row => 
+      headers.map(header => {
+        const value = row[header]
+        // Escape commas and quotes in CSV values
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          return `"${value.replace(/"/g, '""')}"`
+        }
+        return value
+      }).join(',')
+    )
+    
+    return [csvHeaders, ...csvRows].join('\n')
+  }
+
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', filename)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
+
   const fetchAvailableStates = async () => {
     try {
       const response = await fetch('/api/locations/states')
@@ -445,6 +545,16 @@ export default function Farmers() {
 
         {/* Search and Filters */}
         <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Search & Filters</h3>
+            <button
+              onClick={exportToExcel}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 inline-flex items-center"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+              Export to Excel
+            </button>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Search */}
             <div className="relative">

@@ -1,10 +1,8 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { auth } from '../../../lib/firebase-admin';
 import ProductionLogger from '../../../lib/productionLogger';
-
-const prisma = new PrismaClient();
 
 // Helper function for Firebase authentication that doesn't send responses
 async function validateFirebaseAuth(req) {

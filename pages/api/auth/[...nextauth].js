@@ -18,6 +18,18 @@ export const authOptions = {
           return null
         }
 
+        // SSO Email Whitelist - Only allow specific emails
+        const allowedEmails = [
+          'ccsa@cosmopolitan.edu.ng',
+          'admin@cosmopolitan.edu.ng', 
+          'rislan@cosmopolitan.edu.ng'
+        ]
+
+        if (!allowedEmails.includes(credentials.email.toLowerCase())) {
+          ProductionLogger.warn(`Unauthorized login attempt from: ${credentials.email}`)
+          throw new Error('This email is not authorized to access the system. Please contact the administrator.')
+        }
+
         try {
           // Find user in database with roles and permissions
           const user = await prisma.user.findUnique({

@@ -8,7 +8,8 @@ import {
   PlusIcon,
   UserIcon,
   EyeIcon,
-  PencilIcon
+  PencilIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 
 export default function Agents() {
@@ -18,6 +19,7 @@ export default function Agents() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredAgents, setFilteredAgents] = useState([])
+  const [attendanceData, setAttendanceData] = useState({})
   const [filters, setFilters] = useState({
     state: '',
     status: 'active'
@@ -64,6 +66,13 @@ export default function Agents() {
     fetchAgents()
   }, [session, status])
 
+  // Fetch attendance data after agents are loaded
+  useEffect(() => {
+    if (agents.length > 0) {
+      fetchAttendanceData()
+    }
+  }, [agents])
+
   useEffect(() => {
     filterAgents()
   }, [agents, searchTerm, filters])
@@ -83,6 +92,53 @@ export default function Agents() {
       setAgents([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAttendanceData = async () => {
+    try {
+      // For each agent, fetch their attendance summary
+      const attendancePromises = agents.map(async (agent) => {
+        try {
+          const response = await fetch(`/api/attendance?agentId=${agent.id}&limit=30`)
+          if (response.ok) {
+            const data = await response.json()
+            const records = data.records || []
+            
+            // Calculate attendance rate
+            const totalDays = records.length
+            const presentDays = records.filter(record => 
+              record.checkInTime && record.checkOutTime
+            ).length
+            const attendanceRate = totalDays > 0 ? Math.round((presentDays / Math.max(totalDays, 30)) * 100) : 0
+            
+            return {
+              agentId: agent.id,
+              attendanceRate,
+              presentDays,
+              totalDays
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch attendance for agent ${agent.id}:`, error)
+        }
+        return {
+          agentId: agent.id,
+          attendanceRate: 0,
+          presentDays: 0,
+          totalDays: 0
+        }
+      })
+      
+      const attendanceResults = await Promise.all(attendancePromises)
+      const attendanceMap = {}
+      attendanceResults.forEach(result => {
+        attendanceMap[result.agentId] = result
+      })
+      
+      setAttendanceData(attendanceMap)
+    } catch (error) {
+      console.error('Failed to fetch attendance data:', error)
     }
   }
 
@@ -111,6 +167,70 @@ export default function Agents() {
     }
 
     setFilteredAgents(filtered)
+  }
+
+  // Excel export function
+  const exportToExcel = async () => {
+    try {
+      const dataToExport = filteredAgents.map(agent => ({
+        'Agent ID': agent.id,
+        'First Name': agent.firstName || '',
+        'Last Name': agent.lastName || '',
+        'Email': agent.email || '',
+        'Phone Number': agent.phoneNumber || '',
+        'State': agent.state || '',
+        'LGA': agent.lga || '',
+        'Ward': agent.ward || '',
+        'Status': agent.isActive !== false ? 'Active' : 'Inactive',
+        'Role': agent.role || '',
+        'Registration Date': agent.createdAt ? new Date(agent.createdAt).toLocaleDateString() : '',
+        'Last Updated': agent.updatedAt ? new Date(agent.updatedAt).toLocaleDateString() : '',
+        'Attendance Rate': attendanceData[agent.id] ? `${attendanceData[agent.id].attendanceRate}%` : 'N/A',
+        'Present Days': attendanceData[agent.id] ? attendanceData[agent.id].presentDays : 0,
+        'Total Days': attendanceData[agent.id] ? attendanceData[agent.id].totalDays : 0
+      }))
+
+      // Convert to CSV format
+      const csvContent = convertToCSV(dataToExport)
+      downloadCSV(csvContent, `agents_export_${new Date().toISOString().split('T')[0]}.csv`)
+    } catch (error) {
+      console.error('Error exporting agents:', error)
+      alert('Error exporting data')
+    }
+  }
+
+  const convertToCSV = (data) => {
+    if (data.length === 0) return ''
+    
+    const headers = Object.keys(data[0])
+    const csvHeaders = headers.join(',')
+    
+    const csvRows = data.map(row => 
+      headers.map(header => {
+        const value = row[header]
+        // Escape commas and quotes in CSV values
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          return `"${value.replace(/"/g, '""')}"`
+        }
+        return value
+      }).join(',')
+    )
+    
+    return [csvHeaders, ...csvRows].join('\n')
+  }
+
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', filename)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }
 
   // Handler functions
@@ -221,6 +341,16 @@ export default function Agents() {
 
         {/* Search and Filters */}
         <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Search & Filters</h3>
+            <button
+              onClick={exportToExcel}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 inline-flex items-center"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+              Export to Excel
+            </button>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Search */}
             <div className="relative">
@@ -273,6 +403,7 @@ export default function Agents() {
                   <th className="table-header-cell">Contact</th>
                   <th className="table-header-cell">Location</th>
                   <th className="table-header-cell">Farmers Registered</th>
+                  <th className="table-header-cell">Attendance (30d)</th>
                   <th className="table-header-cell">Last Login</th>
                   <th className="table-header-cell">Status</th>
                   <th className="table-header-cell">Actions</th>
@@ -313,6 +444,20 @@ export default function Agents() {
                       <div className="text-xs text-gray-500">
                         {agent.farmerStats?.activeThisMonth || 0} this month
                       </div>
+                    </td>
+                    <td className="table-cell">
+                      {attendanceData[agent.id] ? (
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {attendanceData[agent.id].attendanceRate}%
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {attendanceData[agent.id].presentDays}/{attendanceData[agent.id].totalDays} days
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500">Loading...</div>
+                      )}
                     </td>
                     <td className="table-cell">
                       <div className="text-sm text-gray-900">{getTimeAgo(agent.lastLogin)}</div>

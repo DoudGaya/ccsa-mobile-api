@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
 import Link from 'next/link'
 import { calculateMissingFarmSize } from '../lib/farmCalculations'
+import hierarchicalData from '../data/hierarchical-data'
 import {
   MapIcon,
   EyeIcon,
@@ -14,6 +15,7 @@ import {
   FunnelIcon,
   MapPinIcon,
   ChartBarIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 
 export default function Farms() {
@@ -24,6 +26,7 @@ export default function Farms() {
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedState, setSelectedState] = useState('')
+  const [selectedLGA, setSelectedLGA] = useState('')
   const [selectedCrop, setSelectedCrop] = useState('')
   const [analytics, setAnalytics] = useState({
     overview: {
@@ -127,19 +130,104 @@ export default function Farms() {
     const matchesSearch = !searchTerm || 
       farm.farmer?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       farm.farmer?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      farm.farmer?.nin?.includes(searchTerm) ||
+      farm.farmer?.nin?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       farm.primaryCrop?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      farm.farmState?.toLowerCase().includes(searchTerm.toLowerCase())
+      farm.farmState?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      farm.farmLocalGovernment?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      farm.farmWard?.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesState = !selectedState || farm.farmState === selectedState
-    const matchesCrop = !selectedCrop || farm.primaryCrop === selectedCrop
+    const matchesState = !selectedState || farm.farmState?.toLowerCase() === selectedState.toLowerCase()
+    const matchesLGA = !selectedLGA || farm.farmLocalGovernment?.toLowerCase() === selectedLGA.toLowerCase()
+    const matchesCrop = !selectedCrop || farm.primaryCrop?.toLowerCase() === selectedCrop.toLowerCase()
     
-    return matchesSearch && matchesState && matchesCrop
+    return matchesSearch && matchesState && matchesLGA && matchesCrop
   })
 
-  // Get unique values for filters
-  const uniqueStates = [...new Set(farms.map(farm => farm.farmState).filter(Boolean))].sort()
+  // Get unique values for filters using hierarchical data where possible
+  const getStatesFromHierarchicalData = () => {
+    return hierarchicalData.map(item => ({
+      value: item.state,
+      label: item.state.charAt(0).toUpperCase() + item.state.slice(1)
+    })).sort((a, b) => a.label.localeCompare(b.label))
+  }
+
+  const getLGAsForSelectedState = () => {
+    if (!selectedState) return []
+    const stateData = hierarchicalData.find(item => item.state.toLowerCase() === selectedState.toLowerCase())
+    return stateData ? stateData.lgas.map(lga => ({
+      value: lga.lga,
+      label: lga.lga.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+    })).sort((a, b) => a.label.localeCompare(b.label)) : []
+  }
+
+  const uniqueStates = getStatesFromHierarchicalData()
+  const uniqueLGAs = getLGAsForSelectedState()
   const uniqueCrops = [...new Set(farms.map(farm => farm.primaryCrop).filter(Boolean))].sort()
+
+  // Excel export function
+  const exportToExcel = async () => {
+    try {
+      const dataToExport = filteredFarms.map(farm => ({
+        'Farm ID': farm.id,
+        'Farmer Name': `${farm.farmer?.firstName || ''} ${farm.farmer?.lastName || ''}`.trim(),
+        'Farmer NIN': farm.farmer?.nin || '',
+        'Farm Size (ha)': farm.farmSize || '',
+        'Primary Crop': farm.primaryCrop || '',
+        'Secondary Crop': farm.secondaryCrop || '',
+        'State': farm.farmState || '',
+        'LGA': farm.farmLocalGovernment || '',
+        'Ward': farm.farmWard || '',
+        'Farming Experience': farm.farmingExperience || '',
+        'Farm Ownership': farm.farmOwnership || '',
+        'Soil Type': farm.soilType || '',
+        'Soil Fertility': farm.soilFertility || '',
+        'Created Date': farm.createdAt ? new Date(farm.createdAt).toLocaleDateString() : '',
+        'Latitude': farm.farmLatitude || '',
+        'Longitude': farm.farmLongitude || ''
+      }))
+
+      // Convert to CSV format
+      const csvContent = convertToCSV(dataToExport)
+      downloadCSV(csvContent, `farms_export_${new Date().toISOString().split('T')[0]}.csv`)
+    } catch (error) {
+      console.error('Error exporting farms:', error)
+      alert('Error exporting data')
+    }
+  }
+
+  const convertToCSV = (data) => {
+    if (data.length === 0) return ''
+    
+    const headers = Object.keys(data[0])
+    const csvHeaders = headers.join(',')
+    
+    const csvRows = data.map(row => 
+      headers.map(header => {
+        const value = row[header]
+        // Escape commas and quotes in CSV values
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          return `"${value.replace(/"/g, '""')}"`
+        }
+        return value
+      }).join(',')
+    )
+    
+    return [csvHeaders, ...csvRows].join('\n')
+  }
+
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', filename)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
 
   const handleDeleteFarm = async (farmId) => {
     if (!confirm('Are you sure you want to delete this farm?')) return
@@ -359,11 +447,32 @@ export default function Farms() {
                 id="state"
                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
                 value={selectedState}
-                onChange={(e) => setSelectedState(e.target.value)}
+                onChange={(e) => {
+                  setSelectedState(e.target.value)
+                  setSelectedLGA('') // Reset LGA when state changes
+                }}
               >
                 <option value="">All States</option>
                 {uniqueStates.map(state => (
-                  <option key={state} value={state}>{state}</option>
+                  <option key={state.value} value={state.value}>{state.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="lga" className="block text-sm font-medium text-gray-700">
+                Local Government Area
+              </label>
+              <select
+                id="lga"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+                value={selectedLGA}
+                onChange={(e) => setSelectedLGA(e.target.value)}
+                disabled={!selectedState}
+              >
+                <option value="">All LGAs</option>
+                {uniqueLGAs.map(lga => (
+                  <option key={lga.value} value={lga.value}>{lga.label}</option>
                 ))}
               </select>
             </div>
@@ -385,16 +494,24 @@ export default function Farms() {
               </select>
             </div>
 
-            <div className="flex items-end">
+            <div className="flex items-end space-x-2">
               <button
                 onClick={() => {
                   setSearchTerm('')
                   setSelectedState('')
+                  setSelectedLGA('')
                   setSelectedCrop('')
                 }}
-                className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
               >
                 Clear Filters
+              </button>
+              <button
+                onClick={exportToExcel}
+                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 inline-flex items-center justify-center"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                Export
               </button>
             </div>
           </div>

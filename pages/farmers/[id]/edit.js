@@ -48,6 +48,64 @@ export default function EditFarmer() {
     accountNumber: '',
     bvn: ''
   })
+  const [fieldErrors, setFieldErrors] = useState({})
+
+  // Validation functions
+  const validateField = (name, value) => {
+    const errors = {}
+    
+    switch (name) {
+      case 'firstName':
+      case 'lastName':
+        if (!value || value.trim().length < 2) {
+          errors[name] = `${name.charAt(0).toUpperCase() + name.slice(1)} must be at least 2 characters`
+        }
+        break
+      case 'nin':
+        if (!value) {
+          errors[name] = 'NIN is required'
+        } else if (!/^\d{11}$/.test(value)) {
+          errors[name] = 'NIN must be exactly 11 digits'
+        }
+        break
+      case 'phone':
+        if (!value) {
+          errors[name] = 'Phone number is required'
+        } else if (!/^\d{11}$/.test(value)) {
+          errors[name] = 'Phone number must be exactly 11 digits'
+        }
+        break
+      case 'email':
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          errors[name] = 'Please enter a valid email address'
+        }
+        break
+      case 'accountNumber':
+        if (value && !/^\d{10}$/.test(value)) {
+          errors[name] = 'Account number must be exactly 10 digits'
+        }
+        break
+      case 'bvn':
+        if (value && !/^\d{11}$/.test(value)) {
+          errors[name] = 'BVN must be exactly 11 digits'
+        }
+        break
+      case 'dateOfBirth':
+        if (value) {
+          const date = new Date(value)
+          const today = new Date()
+          const age = today.getFullYear() - date.getFullYear()
+          if (isNaN(date.getTime())) {
+            errors[name] = 'Please enter a valid date'
+          } else if (age < 18 || age > 100) {
+            errors[name] = 'Age must be between 18 and 100 years'
+          }
+        }
+        break
+    }
+    
+    return errors
+  }
 
   useEffect(() => {
     if (status === 'loading') return
@@ -113,9 +171,18 @@ export default function EditFarmer() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
+    
+    // Update form data
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }))
+    
+    // Validate field and clear any existing errors for this field
+    const errors = validateField(name, value)
+    setFieldErrors(prev => ({
+      ...prev,
+      [name]: errors[name] || undefined
     }))
   }
 
@@ -157,8 +224,27 @@ export default function EditFarmer() {
     setSaving(true)
     setError('')
     setSuccess('')
+    setFieldErrors({})
+
+    // Validate all fields before submission
+    const allErrors = {}
+    Object.keys(formData).forEach(field => {
+      const errors = validateField(field, formData[field])
+      if (errors[field]) {
+        allErrors[field] = errors[field]
+      }
+    })
+
+    if (Object.keys(allErrors).length > 0) {
+      setFieldErrors(allErrors)
+      setSaving(false)
+      setError('Please fix the validation errors below')
+      return
+    }
 
     try {
+      console.log('Submitting form data:', formData)
+      
       const response = await fetch(`/api/farmers/${id}`, {
         method: 'PUT',
         headers: {
@@ -168,6 +254,7 @@ export default function EditFarmer() {
       })
 
       const data = await response.json()
+      console.log('Response:', data)
 
       if (response.ok) {
         setSuccess('Farmer information updated successfully!')
@@ -178,10 +265,22 @@ export default function EditFarmer() {
           router.push(`/farmers/${id}`)
         }, 2000)
       } else {
+        console.error('Server error:', data)
+        
+        // Handle validation errors from server
+        if (data.details && Array.isArray(data.details)) {
+          const serverErrors = {}
+          data.details.forEach(detail => {
+            serverErrors[detail.field] = detail.message
+          })
+          setFieldErrors(serverErrors)
+        }
+        
         setError(data.error || 'Failed to update farmer information')
       }
     } catch (error) {
-      setError('An error occurred while updating farmer information')
+      console.error('Network error:', error)
+      setError('Network error: Unable to update farmer information. Please check your connection and try again.')
     } finally {
       setSaving(false)
     }
@@ -279,7 +378,7 @@ export default function EditFarmer() {
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                    First Name *
+                    First Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -288,8 +387,16 @@ export default function EditFarmer() {
                     required
                     value={formData.firstName}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.firstName 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="Enter first name"
                   />
+                  {fieldErrors.firstName && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.firstName}</p>
+                  )}
                 </div>
 
                 <div>
@@ -302,13 +409,21 @@ export default function EditFarmer() {
                     id="middleName"
                     value={formData.middleName}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.middleName 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="Enter middle name"
                   />
+                  {fieldErrors.middleName && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.middleName}</p>
+                  )}
                 </div>
 
                 <div>
                   <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                    Last Name *
+                    Last Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -317,13 +432,21 @@ export default function EditFarmer() {
                     required
                     value={formData.lastName}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.lastName 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="Enter last name"
                   />
+                  {fieldErrors.lastName && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.lastName}</p>
+                  )}
                 </div>
 
                 <div>
                   <label htmlFor="nin" className="block text-sm font-medium text-gray-700">
-                    NIN *
+                    NIN <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -333,8 +456,16 @@ export default function EditFarmer() {
                     maxLength="11"
                     value={formData.nin}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.nin 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="11-digit NIN"
                   />
+                  {fieldErrors.nin && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.nin}</p>
+                  )}
                 </div>
 
                 <div>
@@ -347,8 +478,15 @@ export default function EditFarmer() {
                     id="dateOfBirth"
                     value={formData.dateOfBirth}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.dateOfBirth 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
                   />
+                  {fieldErrors.dateOfBirth && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.dateOfBirth}</p>
+                  )}
                 </div>
 
                 <div>
@@ -360,12 +498,19 @@ export default function EditFarmer() {
                     id="gender"
                     value={formData.gender}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.gender 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
                   >
                     <option value="">Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                   </select>
+                  {fieldErrors.gender && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.gender}</p>
+                  )}
                 </div>
 
                 <div>
@@ -423,7 +568,7 @@ export default function EditFarmer() {
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                    Phone Number *
+                    Phone Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
@@ -432,8 +577,16 @@ export default function EditFarmer() {
                     required
                     value={formData.phone}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.phone 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="e.g., +234 123 456 7890"
                   />
+                  {fieldErrors.phone && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.phone}</p>
+                  )}
                 </div>
 
                 <div>
@@ -446,8 +599,16 @@ export default function EditFarmer() {
                     id="whatsAppNumber"
                     value={formData.whatsAppNumber}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.whatsAppNumber 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="e.g., +234 123 456 7890"
                   />
+                  {fieldErrors.whatsAppNumber && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.whatsAppNumber}</p>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2">
@@ -460,8 +621,16 @@ export default function EditFarmer() {
                     id="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.email 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="Enter email address"
                   />
+                  {fieldErrors.email && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2">
@@ -474,8 +643,16 @@ export default function EditFarmer() {
                     rows={3}
                     value={formData.address}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.address 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="Enter full address"
                   />
+                  {fieldErrors.address && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.address}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -521,8 +698,16 @@ export default function EditFarmer() {
                     id="bankName"
                     value={formData.bankName}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.bankName 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="Enter bank name"
                   />
+                  {fieldErrors.bankName && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.bankName}</p>
+                  )}
                 </div>
 
                 <div>
@@ -535,8 +720,16 @@ export default function EditFarmer() {
                     id="accountName"
                     value={formData.accountName}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.accountName 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="Enter account name"
                   />
+                  {fieldErrors.accountName && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.accountName}</p>
+                  )}
                 </div>
 
                 <div>
@@ -549,13 +742,22 @@ export default function EditFarmer() {
                     id="accountNumber"
                     value={formData.accountNumber}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.accountNumber 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="Enter account number"
+                    maxLength="10"
                   />
+                  {fieldErrors.accountNumber && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.accountNumber}</p>
+                  )}
                 </div>
 
                 <div>
                   <label htmlFor="bvn" className="block text-sm font-medium text-gray-700">
-                    BVN
+                    BVN (Bank Verification Number)
                   </label>
                   <input
                     type="text"
@@ -564,8 +766,16 @@ export default function EditFarmer() {
                     maxLength="11"
                     value={formData.bvn}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                      fieldErrors.bvn 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="11-digit BVN"
                   />
+                  {fieldErrors.bvn && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.bvn}</p>
+                  )}
                 </div>
               </div>
             </div>
