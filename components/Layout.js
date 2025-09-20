@@ -31,7 +31,7 @@ const navigation = [
   { name: 'Clusters', href: '/clusters', icon: BuildingOfficeIcon },
   { name: 'Farms', href: '/farms', icon: GlobeAltIcon },
   // { name: 'Map View', href: '/map', icon: MapIcon },
-  { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
+  // { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   // { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
   { name: 'GIS (Google)', href: '/gis-map-google', icon: MapIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
