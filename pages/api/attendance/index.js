@@ -62,22 +62,47 @@ async function createAttendanceRecord(req, res) {
     const validatedData = attendanceSchema.parse(req.body);
 
     // Get agent ID from request or user
-    const agentId = validatedData.agentId || user.id;
+    const agentUserId = validatedData.agentId || user.id;
 
-    // Verify the agent exists
-    const agent = await prisma.agent.findUnique({
-      where: { userId: agentId },
+    // Find the user first
+    const userRecord = await prisma.user.findUnique({
+      where: { 
+        id: agentUserId,
+        role: 'agent'
+      },
+      select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true }
+    });
+
+    if (!userRecord) {
+      return res.status(404).json({ error: 'Agent user not found' });
+    }
+
+    // Find or create Agent record
+    let agent = await prisma.agent.findUnique({
+      where: { userId: agentUserId },
       select: { id: true, firstName: true, lastName: true }
     });
 
     if (!agent) {
-      return res.status(404).json({ error: 'Agent not found' });
+      // Create Agent record if it doesn't exist
+      agent = await prisma.agent.create({
+        data: {
+          userId: agentUserId,
+          nin: `temp_${Date.now()}`, // Temporary NIN, should be updated later
+          firstName: userRecord.firstName || 'Unknown',
+          lastName: userRecord.lastName || 'User',
+          phone: userRecord.phoneNumber || 'Unknown',
+          email: userRecord.email,
+          status: 'active'
+        },
+        select: { id: true, firstName: true, lastName: true }
+      });
     }
 
     // Create attendance record
     const attendance = await prisma.attendance.create({
       data: {
-        agentId: agent.id,
+        agentId: agent.id, // Use user.id as agentId
         type: validatedData.type,
         timestamp: new Date(validatedData.timestamp),
         location: validatedData.location,
@@ -146,22 +171,65 @@ async function getAttendanceRecords(req, res) {
     let whereClause = {};
 
     if (agentId) {
-      const agent = await prisma.agent.findUnique({
-        where: { userId: agentId },
-        select: { id: true }
+      // Find or create Agent record for the specified user
+      const userRecord = await prisma.user.findUnique({
+        where: { id: agentId, role: 'agent' },
+        select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true }
       });
       
-      if (agent) {
+      if (userRecord) {
+        let agent = await prisma.agent.findUnique({
+          where: { userId: agentId },
+          select: { id: true }
+        });
+
+        if (!agent) {
+          // Create Agent record if it doesn't exist
+          agent = await prisma.agent.create({
+            data: {
+              userId: agentId,
+              nin: `temp_${Date.now()}`,
+              firstName: userRecord.firstName || 'Unknown',
+              lastName: userRecord.lastName || 'User',
+              phone: userRecord.phoneNumber || 'Unknown',
+              email: userRecord.email,
+              status: 'active'
+            },
+            select: { id: true }
+          });
+        }
+        
         whereClause.agentId = agent.id;
       }
     } else {
       // If no agentId specified, get current user's records
-      const agent = await prisma.agent.findUnique({
-        where: { userId: user.id },
-        select: { id: true }
+      const userRecord = await prisma.user.findUnique({
+        where: { id: user.id, role: 'agent' },
+        select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true }
       });
       
-      if (agent) {
+      if (userRecord) {
+        let agent = await prisma.agent.findUnique({
+          where: { userId: user.id },
+          select: { id: true }
+        });
+
+        if (!agent) {
+          // Create Agent record if it doesn't exist
+          agent = await prisma.agent.create({
+            data: {
+              userId: user.id,
+              nin: `temp_${Date.now()}`,
+              firstName: userRecord.firstName || 'Unknown',
+              lastName: userRecord.lastName || 'User',
+              phone: userRecord.phoneNumber || 'Unknown',
+              email: userRecord.email,
+              status: 'active'
+            },
+            select: { id: true }
+          });
+        }
+        
         whereClause.agentId = agent.id;
       }
     }
