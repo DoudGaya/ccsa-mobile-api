@@ -334,17 +334,16 @@ export default function NewAgent() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       First Name <span className="text-red-500">*</span>
-                      {watch('firstName') && (
-                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled</span>
+                      {nimcData?.verified && watch('firstName') && (
+                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled from NIN</span>
                       )}
                     </label>
                     <input
                       {...register('firstName')}
                       type="text"
-                      disabled={nimcData?.verified}
                       className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                         errors.firstName ? 'border-red-300' : 'border-gray-300'
-                      } ${nimcData?.verified ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                      }`}
                       placeholder="Enter first name"
                     />
                     {errors.firstName && (
@@ -355,17 +354,16 @@ export default function NewAgent() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Middle Name
-                      {watch('middleName') && (
-                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled</span>
+                      {nimcData?.verified && watch('middleName') && (
+                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled from NIN</span>
                       )}
                     </label>
                     <input
                       {...register('middleName')}
                       type="text"
-                      disabled={nimcData?.verified}
                       className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                         errors.middleName ? 'border-red-300' : 'border-gray-300'
-                      } ${nimcData?.verified ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                      }`}
                       placeholder="Enter middle name (optional)"
                     />
                   </div>
@@ -373,17 +371,16 @@ export default function NewAgent() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Last Name <span className="text-red-500">*</span>
-                      {watch('lastName') && (
-                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled</span>
+                      {nimcData?.verified && watch('lastName') && (
+                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled from NIN</span>
                       )}
                     </label>
                     <input
                       {...register('lastName')}
                       type="text"
-                      disabled={nimcData?.verified}
                       className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                         errors.lastName ? 'border-red-300' : 'border-gray-300'
-                      } ${nimcData?.verified ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                      }`}
                       placeholder="Enter last name"
                     />
                     {errors.lastName && (
@@ -397,33 +394,29 @@ export default function NewAgent() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Date of Birth
-                      {watch('dateOfBirth') && (
-                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled</span>
+                      {nimcData?.verified && watch('dateOfBirth') && (
+                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled from NIN</span>
                       )}
                     </label>
                     <input
                       {...register('dateOfBirth')}
                       type="date"
-                      disabled={nimcData?.verified}
-                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        nimcData?.verified ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'
-                      }`}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Gender <span className="text-red-500">*</span>
-                      {watch('gender') && (
-                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled</span>
+                      {nimcData?.verified && watch('gender') && (
+                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled from NIN</span>
                       )}
                     </label>
                     <select
                       {...register('gender')}
-                      disabled={nimcData?.verified}
                       className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                         errors.gender ? 'border-red-300' : 'border-gray-300'
-                      } ${nimcData?.verified ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                      }`}
                     >
                       <option value="">Select Gender</option>
                       <option value="MALE">Male</option>
@@ -437,16 +430,15 @@ export default function NewAgent() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Marital Status <span className="text-red-500">*</span>
-                      {watch('maritalStatus') && (
-                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled</span>
+                      {nimcData?.verified && watch('maritalStatus') && (
+                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled from NIN</span>
                       )}
                     </label>
                     <select
                       {...register('maritalStatus')}
-                      disabled={nimcData?.verified}
                       className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                         errors.maritalStatus ? 'border-red-300' : 'border-gray-300'
-                      } ${nimcData?.verified ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                      }`}
                     >
                       <option value="">Select Marital Status</option>
                       <option value="single">Single</option>
@@ -480,8 +472,8 @@ export default function NewAgent() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Phone Number <span className="text-red-500">*</span>
-                      {watch('phone') && (
-                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled</span>
+                      {nimcData?.verified && watch('phone') && (
+                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled from NIN</span>
                       )}
                     </label>
                     <input
@@ -503,8 +495,8 @@ export default function NewAgent() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email Address <span className="text-red-500">*</span>
-                      {watch('email') && (
-                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled</span>
+                      {nimcData?.verified && watch('email') && (
+                        <span className="ml-2 text-xs text-green-600">✓ Auto-filled from NIN</span>
                       )}
                     </label>
                     <input

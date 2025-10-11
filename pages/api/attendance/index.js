@@ -64,18 +64,20 @@ async function createAttendanceRecord(req, res) {
     // Get agent ID from request or user
     const agentUserId = validatedData.agentId || user.id;
 
-    // Find the user first
+    // Find the user first (accept any user, not just role='agent')
     const userRecord = await prisma.user.findUnique({
       where: { 
-        id: agentUserId,
-        role: 'agent'
+        id: agentUserId
       },
-      select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true }
+      select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true, role: true }
     });
 
     if (!userRecord) {
-      return res.status(404).json({ error: 'Agent user not found' });
+      return res.status(404).json({ error: 'User not found. Please ensure you are logged in.' });
     }
+    
+    // Log for debugging
+    console.log(`[ATTENDANCE] User found: ${userRecord.email}, Role: ${userRecord.role}`);
 
     // Find or create Agent record
     let agent = await prisma.agent.findUnique({
@@ -171,13 +173,15 @@ async function getAttendanceRecords(req, res) {
     let whereClause = {};
 
     if (agentId) {
-      // Find or create Agent record for the specified user
+      // Find or create Agent record for the specified user (accept any user, not just role='agent')
       const userRecord = await prisma.user.findUnique({
-        where: { id: agentId, role: 'agent' },
-        select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true }
+        where: { id: agentId },
+        select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true, role: true }
       });
       
       if (userRecord) {
+        console.log(`[ATTENDANCE GET] Querying for user: ${userRecord.email}, Role: ${userRecord.role}`);
+        
         let agent = await prisma.agent.findUnique({
           where: { userId: agentId },
           select: { id: true }
@@ -202,13 +206,15 @@ async function getAttendanceRecords(req, res) {
         whereClause.agentId = agent.id;
       }
     } else {
-      // If no agentId specified, get current user's records
+      // If no agentId specified, get current user's records (accept any user, not just role='agent')
       const userRecord = await prisma.user.findUnique({
-        where: { id: user.id, role: 'agent' },
-        select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true }
+        where: { id: user.id },
+        select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true, role: true }
       });
       
       if (userRecord) {
+        console.log(`[ATTENDANCE GET] User found: ${userRecord.email}, Role: ${userRecord.role}`);
+        
         let agent = await prisma.agent.findUnique({
           where: { userId: user.id },
           select: { id: true }

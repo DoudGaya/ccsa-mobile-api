@@ -668,9 +668,9 @@ export default function EditFarmer() {
             </div>
             <div className="px-6 py-6">
               <LocationSelect
-                initialState={formData.state}
-                initialLga={formData.lga}
-                initialWard={formData.ward}
+                selectedState={formData.state}
+                selectedLGA={formData.lga}
+                selectedWard={formData.ward}
                 onStateChange={handleStateChange}
                 onLGAChange={handleLGAChange}
                 onWardChange={handleWardChange}

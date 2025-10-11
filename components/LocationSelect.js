@@ -28,7 +28,9 @@ const LocationSelect = ({
   useEffect(() => {
     if (selectedState) {
       setLoading(true)
-      const stateData = hierarchicalData.find(state => state.state === selectedState)
+      // Convert selectedState back to raw format for data lookup
+      const rawState = selectedState.toLowerCase().replace(/ /g, '-')
+      const stateData = hierarchicalData.find(state => state.state === rawState)
       if (stateData) {
         const lgaList = stateData.lgas.map(lga => ({
           value: lga.lga,
@@ -52,9 +54,12 @@ const LocationSelect = ({
   useEffect(() => {
     if (selectedState && selectedLGA) {
       setLoading(true)
-      const stateData = hierarchicalData.find(state => state.state === selectedState)
+      // Convert selectedState and selectedLGA back to raw format for data lookup
+      const rawState = selectedState.toLowerCase().replace(/ /g, '-')
+      const rawLGA = selectedLGA.toLowerCase().replace(/ /g, '-')
+      const stateData = hierarchicalData.find(state => state.state === rawState)
       if (stateData) {
-        const lgaData = stateData.lgas.find(lga => lga.lga === selectedLGA)
+        const lgaData = stateData.lgas.find(lga => lga.lga === rawLGA)
         if (lgaData) {
           const wardList = lgaData.wards.map(ward => ({
             value: ward.ward,
@@ -77,11 +82,15 @@ const LocationSelect = ({
   useEffect(() => {
     if (selectedState && selectedLGA && selectedWard) {
       setLoading(true)
-      const stateData = hierarchicalData.find(state => state.state === selectedState)
+      // Convert selected values back to raw format for data lookup
+      const rawState = selectedState.toLowerCase().replace(/ /g, '-')
+      const rawLGA = selectedLGA.toLowerCase().replace(/ /g, '-')
+      const rawWard = selectedWard.toLowerCase().replace(/ /g, '-')
+      const stateData = hierarchicalData.find(state => state.state === rawState)
       if (stateData) {
-        const lgaData = stateData.lgas.find(lga => lga.lga === selectedLGA)
+        const lgaData = stateData.lgas.find(lga => lga.lga === rawLGA)
         if (lgaData) {
-          const wardData = lgaData.wards.find(ward => ward.ward === selectedWard)
+          const wardData = lgaData.wards.find(ward => ward.ward === rawWard)
           if (wardData) {
             const puList = wardData.polling_units.map(pu => ({
               value: pu,

@@ -67,7 +67,7 @@ async function getFarmers(req, res) {
       limit = 10, 
       search = '', 
       state = '', 
-      status = 'active' 
+      status // No default - mobile agents should see all their farmers regardless of status
     } = req.query;
 
     ProductionLogger.debug('Farmers API query params', { page, limit, search, state, status });
@@ -76,9 +76,9 @@ async function getFarmers(req, res) {
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     const whereClause = {
-      status,
-      // Only filter by agentId for mobile agents, not for web admins
+      // Only filter by agentId for mobile agents (agentId is the Firebase UID from User.id)
       ...(req.isAdmin ? {} : { agentId: req.user?.uid }),
+      ...(status && { status }), // Only filter by status if explicitly provided
       ...(state && { state }),
       ...(search && {
         OR: [

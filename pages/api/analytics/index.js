@@ -1,12 +1,118 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
 import prisma from '../../../lib/prisma';
 import { getSession } from 'next-auth/react';
+import ProductionLogger from '../../../lib/productionLogger';
 
 async function handler(req, res) {
+  // Enable CORS for mobile app
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  try {
+    // Check if this is a simple mobile request (just needs basic stats)
+    const isMobileSimpleRequest = !req.isAdmin && req.query.simple !== 'false';
+    
+    if (isMobileSimpleRequest) {
+      return await handleMobileAnalytics(req, res);
+    }
+
+    // Comprehensive analytics for web admin or detailed mobile request
+    return await handleComprehensiveAnalytics(req, res);
+  } catch (error) {
+    console.error('Analytics API error:', error);
+    ProductionLogger.error('Analytics API error:', error);
+    
+    // Return fallback stats instead of error for mobile
+    if (!req.isAdmin) {
+      return res.status(200).json({
+        totalFarmers: 0,
+        farmersThisMonth: 0,
+        farmersThisWeek: 0,
+        farmersToday: 0,
+        pendingVerification: 0,
+        approvedFarmers: 0,
+        rejectedFarmers: 0,
+      });
+    }
+    
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Simple analytics for mobile agents
+async function handleMobileAnalytics(req, res) {
+  try {
+    const agentUserId = req.user.uid;
+    
+    ProductionLogger.info(`Fetching simple analytics for agent: ${agentUserId}`);
+
+    // Calculate date ranges
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Get all farmers for this agent (using Firebase UID as agentId)
+    const [
+      totalFarmers,
+      farmersThisMonth,
+      farmersThisWeek,
+      farmersToday,
+      pendingVerification,
+      approvedFarmers,
+      rejectedFarmers,
+    ] = await Promise.all([
+      prisma.farmer.count({ where: { agentId: agentUserId } }),
+      prisma.farmer.count({ where: { agentId: agentUserId, createdAt: { gte: startOfMonth } } }),
+      prisma.farmer.count({ where: { agentId: agentUserId, createdAt: { gte: startOfWeek } } }),
+      prisma.farmer.count({ where: { agentId: agentUserId, createdAt: { gte: startOfToday } } }),
+      prisma.farmer.count({ where: { agentId: agentUserId, status: 'pending' } }),
+      prisma.farmer.count({ where: { agentId: agentUserId, status: 'active' } }),
+      prisma.farmer.count({ where: { agentId: agentUserId, status: 'rejected' } }),
+    ]);
+
+    const stats = {
+      totalFarmers,
+      farmersThisMonth,
+      farmersThisWeek,
+      farmersToday,
+      pendingVerification,
+      approvedFarmers,
+      rejectedFarmers,
+    };
+
+    ProductionLogger.info(`Analytics for agent ${agentUserId}:`, stats);
+
+    return res.status(200).json(stats);
+  } catch (error) {
+    console.error('Error in mobile analytics:', error);
+    ProductionLogger.error('Mobile analytics error:', error);
+    
+    return res.status(200).json({
+      totalFarmers: 0,
+      farmersThisMonth: 0,
+      farmersThisWeek: 0,
+      farmersToday: 0,
+      pendingVerification: 0,
+      approvedFarmers: 0,
+      rejectedFarmers: 0,
+    });
+  }
+}
+
+// Comprehensive analytics for web admin
+async function handleComprehensiveAnalytics(req, res) {
   try {
     let whereClause = {};
     let farmWhereClause = {};
@@ -287,10 +393,11 @@ async function handler(req, res) {
       }
     };
 
-    res.status(200).json(stats);
+    return res.status(200).json(stats);
   } catch (error) {
-    console.error('Analytics API error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Comprehensive analytics error:', error);
+    ProductionLogger.error('Comprehensive analytics error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 
@@ -310,12 +417,34 @@ export default async function apiHandler(req, res) {
     } else {
       // Mobile agent request - apply Firebase authentication middleware
       await authMiddleware(req, res);
+      
+      // Check if response was already sent by authMiddleware
+      if (res.headersSent) {
+        return;
+      }
+      
       req.isAdmin = false;
     }
 
     return await handler(req, res);
   } catch (error) {
     console.error('Analytics API error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    ProductionLogger.error('Analytics API main handler error:', error);
+    
+    // Return fallback for mobile, error for web
+    if (!res.headersSent) {
+      if (req.user && !req.isAdmin) {
+        return res.status(200).json({
+          totalFarmers: 0,
+          farmersThisMonth: 0,
+          farmersThisWeek: 0,
+          farmersToday: 0,
+          pendingVerification: 0,
+          approvedFarmers: 0,
+          rejectedFarmers: 0,
+        });
+      }
+      return res.status(500).json({ error: 'Internal server error' });
+    }
   }
 }

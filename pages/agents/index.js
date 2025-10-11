@@ -97,26 +97,19 @@ export default function Agents() {
 
   const fetchAttendanceData = async () => {
     try {
-      // For each agent, fetch their attendance summary
+      // For each agent, fetch their attendance summary using userId
       const attendancePromises = agents.map(async (agent) => {
         try {
-          const response = await fetch(`/api/attendance?agentId=${agent.id}&limit=30`)
+          const response = await fetch(`/api/agents/attendance-summary?userId=${agent.id}`)
           if (response.ok) {
             const data = await response.json()
-            const records = data.records || []
-            
-            // Calculate attendance rate
-            const totalDays = records.length
-            const presentDays = records.filter(record => 
-              record.checkInTime && record.checkOutTime
-            ).length
-            const attendanceRate = totalDays > 0 ? Math.round((presentDays / Math.max(totalDays, 30)) * 100) : 0
-            
             return {
               agentId: agent.id,
-              attendanceRate,
-              presentDays,
-              totalDays
+              attendanceRate: data.attendanceRate || 0,
+              presentDays: data.presentDays || 0,
+              totalDays: data.totalDays || 30,
+              checkIns: data.checkIns || 0,
+              checkOuts: data.checkOuts || 0
             }
           }
         } catch (error) {
@@ -126,7 +119,9 @@ export default function Agents() {
           agentId: agent.id,
           attendanceRate: 0,
           presentDays: 0,
-          totalDays: 0
+          totalDays: 30,
+          checkIns: 0,
+          checkOuts: 0
         }
       })
       

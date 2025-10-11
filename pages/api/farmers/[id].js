@@ -245,23 +245,90 @@ async function updateFarmer(req, res, id) {
 
 async function deleteFarmer(req, res, id) {
   try {
-    // Check if farmer exists
+    ProductionLogger.debug(`Delete request for farmer ID: ${id} by user: ${req.user?.email}`);
+    
+    // Check if user is admin (only admins can delete farmers)
+    if (!req.isAdmin) {
+      ProductionLogger.warn(`Non-admin user ${req.user?.email} attempted to delete farmer`);
+      return res.status(403).json({ 
+        error: 'Unauthorized',
+        message: 'Only administrators can delete farmers'
+      });
+    }
+
+    // Check if farmer exists and get related data
     const farmer = await prisma.farmer.findUnique({
       where: { id },
+      include: {
+        farms: true,
+        referees: true,
+        certificates: true
+      }
     });
 
     if (!farmer) {
-      return res.status(404).json({ error: 'Farmer not found' });
+      ProductionLogger.warn(`Farmer not found for deletion: ${id}`);
+      return res.status(404).json({ 
+        error: 'Not found',
+        message: 'Farmer not found'
+      });
     }
 
-    // Delete farmer (referees and certificates will be deleted due to cascade)
+    ProductionLogger.info(`Deleting farmer: ${farmer.firstName} ${farmer.lastName} (${id})`);
+    ProductionLogger.debug(`Associated data: ${farmer.farms.length} farms, ${farmer.referees.length} referees, ${farmer.certificates.length} certificates`);
+
+    // Delete in correct order due to foreign key constraints
+    // 1. Delete all farms (cascade should handle this, but being explicit)
+    if (farmer.farms.length > 0) {
+      await prisma.farm.deleteMany({
+        where: { farmerId: id }
+      });
+      ProductionLogger.debug(`Deleted ${farmer.farms.length} farms`);
+    }
+
+    // 2. Delete referees (should cascade but doing explicitly)
+    if (farmer.referees.length > 0) {
+      await prisma.referee.deleteMany({
+        where: { farmerId: id }
+      });
+      ProductionLogger.debug(`Deleted ${farmer.referees.length} referees`);
+    }
+
+    // 3. Delete certificates (should cascade but doing explicitly)
+    if (farmer.certificates.length > 0) {
+      await prisma.certificate.deleteMany({
+        where: { farmerId: id }
+      });
+      ProductionLogger.debug(`Deleted ${farmer.certificates.length} certificates`);
+    }
+
+    // 4. Finally delete the farmer
     await prisma.farmer.delete({
       where: { id },
     });
 
-    return res.status(200).json({ message: 'Farmer deleted successfully' });
+    ProductionLogger.info(`Successfully deleted farmer ${farmer.firstName} ${farmer.lastName} and all associated records`);
+
+    return res.status(200).json({ 
+      success: true,
+      message: 'Farmer deleted successfully',
+      deletedFarmer: {
+        id: farmer.id,
+        name: `${farmer.firstName} ${farmer.lastName}`,
+        deletedRecords: {
+          farms: farmer.farms.length,
+          referees: farmer.referees.length,
+          certificates: farmer.certificates.length
+        }
+      }
+    });
   } catch (error) {
-    console.error('Error deleting farmer:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    ProductionLogger.error('Error deleting farmer:', error);
+    console.error('Full error details:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }

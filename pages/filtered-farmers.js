@@ -10,7 +10,8 @@ import {
   FunnelIcon,
   MagnifyingGlassIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline'
 
 export default function FilteredView() {
@@ -26,6 +27,7 @@ export default function FilteredView() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
+  const [deletingId, setDeletingId] = useState(null)
   
   const ITEMS_PER_PAGE = 20
 
@@ -115,6 +117,44 @@ export default function FilteredView() {
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value)
     setCurrentPage(1)
+  }
+
+  const handleDelete = async (farmerId, farmerName) => {
+    if (!confirm(`Are you sure you want to delete ${farmerName}? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setDeletingId(farmerId)
+      
+      const response = await fetch(`/api/farmers/${farmerId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        // Remove from local state
+        setFarmers(farmers.filter(f => f.id !== farmerId))
+        setTotalCount(totalCount - 1)
+        
+        // Show success message
+        alert('Farmer deleted successfully')
+        
+        // Refresh the list if this was the last item on the page
+        if (farmers.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1)
+        } else {
+          fetchFilteredFarmers()
+        }
+      } else {
+        const error = await response.json()
+        alert(`Failed to delete farmer: ${error.message || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Error deleting farmer:', error)
+      alert('An error occurred while deleting the farmer')
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   if (status === 'loading' || loading) {
@@ -337,9 +377,27 @@ export default function FilteredView() {
                       </button>
                       <button
                         onClick={() => router.push(`/farmers/${farmer.id}/edit`)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-600 hover:text-blue-900 mr-3"
                       >
                         Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(farmer.id, `${farmer.firstName} ${farmer.lastName}`)}
+                        disabled={deletingId === farmer.id}
+                        className={`inline-flex items-center text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title="Delete farmer"
+                      >
+                        {deletingId === farmer.id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                            <span className="text-xs">Deleting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <TrashIcon className="h-4 w-4 mr-1" />
+                            Delete
+                          </>
+                        )}
                       </button>
                     </td>
                   </tr>

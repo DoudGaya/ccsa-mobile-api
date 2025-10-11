@@ -426,7 +426,7 @@ export default function VerifyCertificate() {
               <div>
                 <label className="text-sm font-medium text-gray-500">Verification URL</label>
                 <p className="text-blue-600 text-sm break-all">
-                  {`http://192.168.0.4:3000/verify-certificate/${certificate.certificateId}`}
+                  {`http://192.168.0.3:3000/verify-certificate/${certificate.certificateId}`}
                 </p>
               </div>
             </div>
