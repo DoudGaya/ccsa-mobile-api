@@ -14,7 +14,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)
+    const { method } = req;
+
+    // Allow GET requests without authentication (public access to clusters list)
+    if (method === 'GET') {
+      return await getClusters(req, res);
+    }
+
+    // For POST/PUT/DELETE, require authentication
     const session = await getServerSession(req, res, authOptions);
     
     if (session) {
@@ -37,11 +44,7 @@ export default async function handler(req, res) {
       req.isAdmin = false;
     }
 
-    const { method } = req;
-
     switch (method) {
-      case 'GET':
-        return await getClusters(req, res);
       case 'POST':
         return await createCluster(req, res);
       default:
@@ -88,6 +91,10 @@ async function getClusters(req, res) {
 
     return res.status(200).json({
       clusters,
+      totalCount: total,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      // Legacy support for old format
       pagination: {
         total,
         page: parseInt(page),

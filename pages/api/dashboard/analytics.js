@@ -1,6 +1,6 @@
 import { getSession } from 'next-auth/react'
 import prisma from '../../../lib/prisma'
-import { calculateTotalHectares, calculateFarmerStatus } from '../../../lib/farmCalculations'
+import { calculateFarmerStatus } from '../../../lib/farmCalculations'
 // import { Logger } from '../../../lib/logger' // Commented out to avoid issues
 
 export default async function handler(req, res) {
@@ -43,8 +43,10 @@ export default async function handler(req, res) {
       })
     ]);
 
-    // Calculate total hectares using the farm calculation utility
-    const totalHectares = calculateTotalHectares(allFarms);
+    // Calculate total hectares directly from database - SINGLE SOURCE OF TRUTH
+    const totalHectares = allFarms.reduce((sum, farm) => {
+      return sum + (parseFloat(farm.farmSize) || 0);
+    }, 0);
 
     // Get crop analytics
     const cropAnalytics = await Promise.all([

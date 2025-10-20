@@ -3,7 +3,6 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
 import Link from 'next/link'
-import { calculateMissingFarmSize } from '../lib/farmCalculations'
 import hierarchicalData from '../data/hierarchical-data'
 import {
   MapIcon,
@@ -72,13 +71,11 @@ export default function Farms() {
       const data = await response.json()
       const farmsData = data.farms || []
       
-      // Calculate missing farm sizes using the utility
-      const farmsWithCalculatedSizes = farmsData.map(farm => calculateMissingFarmSize(farm))
-      
-      setFarms(farmsWithCalculatedSizes)
+      // Use farm sizes directly from database - SINGLE SOURCE OF TRUTH
+      setFarms(farmsData)
       
       // Calculate stats
-      calculateStats(farmsWithCalculatedSizes)
+      calculateStats(farmsData)
     } catch (err) {
       console.error('Error fetching farms:', err)
       setError(err.message)
