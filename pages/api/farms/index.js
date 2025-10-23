@@ -1,5 +1,5 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
-import prisma from '../../../lib/prisma';
+import prisma, { withRetry } from '../../../lib/prisma';
 import { getSession } from 'next-auth/react';
 import { updateFarmerStatusByFarms } from '../../../lib/farmerStatusUtils';
 
@@ -129,16 +129,17 @@ export default async function handler(req, res) {
       }
 
       // Convert string values to appropriate types
-      const parsedFarmSize = farmSize ? parseFloat(farmSize) : null;
-      const parsedFarmLatitude = farmLatitude ? parseFloat(farmLatitude) : null;
-      const parsedFarmLongitude = farmLongitude ? parseFloat(farmLongitude) : null;
-      const parsedFarmElevation = farmElevation ? parseFloat(farmElevation) : null;
-      const parsedSoilPH = soilPH ? parseFloat(soilPH) : null;
-      const parsedFarmArea = farmArea ? parseFloat(farmArea) : null;
-      const parsedQuantity = quantity ? parseFloat(quantity) : null;
-      const parsedCrop = crop ? parseFloat(crop) : null;
-      const parsedFarmingExperience = farmingExperience ? parseInt(farmingExperience) : null;
-      const parsedYear = year ? parseInt(year) : null;
+      // Use || instead of ? to handle both null/undefined AND empty strings
+      const parsedFarmSize = (farmSize && farmSize !== '') ? parseFloat(farmSize) : null;
+      const parsedFarmLatitude = (farmLatitude && farmLatitude !== '') ? parseFloat(farmLatitude) : null;
+      const parsedFarmLongitude = (farmLongitude && farmLongitude !== '') ? parseFloat(farmLongitude) : null;
+      const parsedFarmElevation = (farmElevation && farmElevation !== '') ? parseFloat(farmElevation) : null;
+      const parsedSoilPH = (soilPH && soilPH !== '') ? parseFloat(soilPH) : null;
+      const parsedFarmArea = (farmArea && farmArea !== '') ? parseFloat(farmArea) : null;
+      const parsedQuantity = (quantity && quantity !== '') ? parseFloat(quantity) : null;
+      // Parse farmingExperience as float first, then round to int to handle decimal values like "0.1"
+      const parsedFarmingExperience = (farmingExperience && farmingExperience !== '') ? Math.round(parseFloat(farmingExperience)) : null;
+      const parsedYear = (year && year !== '') ? parseFloat(year) : null;
 
       // Validate parsed numbers
       if (farmSize && isNaN(parsedFarmSize)) {
@@ -150,16 +151,15 @@ export default async function handler(req, res) {
       if (farmLongitude && isNaN(parsedFarmLongitude)) {
         return res.status(400).json({ error: 'Invalid farm longitude value' });
       }
-      if (crop && isNaN(parsedCrop)) {
-        return res.status(400).json({ error: 'Invalid crop value' });
-      }
 
       console.log('Parsed numeric values:', {
         farmSize: `${farmSize} -> ${parsedFarmSize}`,
         farmLatitude: `${farmLatitude} -> ${parsedFarmLatitude}`,
         farmLongitude: `${farmLongitude} -> ${parsedFarmLongitude}`,
         farmingExperience: `${farmingExperience} -> ${parsedFarmingExperience}`,
-        crop: `${crop} -> ${parsedCrop}`,
+        quantity: `${quantity} -> ${parsedQuantity}`,
+        soilPH: `${soilPH} -> ${parsedSoilPH}`,
+        year: `${year} -> ${parsedYear}`,
       });
 
       // Verify farmer exists
@@ -171,45 +171,78 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Farmer not found' });
       }
 
-      const farm = await prisma.farm.create({
-        data: {
-          farmerId,
-          farmSize: parsedFarmSize,
-          primaryCrop,
-          produceCategory,
-          farmOwnership,
-          farmState,
-          farmLocalGovernment,
-          farmingSeason,
-          farmWard,
-          farmPollingUnit,
-          secondaryCrop,
-          farmingExperience: parsedFarmingExperience,
-          farmLatitude: parsedFarmLatitude,
-          farmLongitude: parsedFarmLongitude,
-          farmPolygon,
-          soilType,
-          soilPH: parsedSoilPH,
-          soilFertility,
-          farmCoordinates,
-          coordinateSystem,
-          farmArea: parsedFarmArea,
-          farmElevation: parsedFarmElevation,
-          year: parsedYear,
-          yieldSeason,
-          crop: parsedCrop,
-          quantity: parsedQuantity,
-        },
-        include: {
-          farmer: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              nin: true,
+      // Prepare JSON fields - ensure they're properly formatted for PostgreSQL
+      // Remove any undefined or circular references
+      let preparedFarmPolygon = null;
+      let preparedFarmCoordinates = null;
+
+      if (farmPolygon && Array.isArray(farmPolygon) && farmPolygon.length > 0) {
+        // Clean the polygon data - remove any extra fields that might cause issues
+        preparedFarmPolygon = farmPolygon.map(point => ({
+          latitude: point.latitude,
+          longitude: point.longitude,
+          timestamp: point.timestamp || null,
+          accuracy: point.accuracy || null
+        }));
+      }
+
+      if (farmCoordinates) {
+        preparedFarmCoordinates = JSON.parse(JSON.stringify(farmCoordinates));
+      }
+
+      console.log('Prepared JSON fields:', {
+        farmPolygonLength: preparedFarmPolygon?.length || 0,
+        hasFarmCoordinates: !!preparedFarmCoordinates
+      });
+
+      // Prepare the data object with all fields, ensuring proper types
+      const farmData = {
+        farmerId,
+        farmSize: parsedFarmSize,
+        primaryCrop: primaryCrop || null,
+        produceCategory: produceCategory || null,
+        farmOwnership: farmOwnership || null,
+        farmState: farmState || null,
+        farmLocalGovernment: farmLocalGovernment || null,
+        farmingSeason: farmingSeason || null,
+        farmWard: farmWard || null,
+        farmPollingUnit: farmPollingUnit || null,
+        secondaryCrop: secondaryCrop || null,
+        farmingExperience: parsedFarmingExperience,
+        farmLatitude: parsedFarmLatitude,
+        farmLongitude: parsedFarmLongitude,
+        // Temporarily exclude JSON fields to test if they're causing the issue
+        // farmPolygon: preparedFarmPolygon,
+        soilType: soilType || null,
+        soilPH: parsedSoilPH,
+        soilFertility: soilFertility || null,
+        // farmCoordinates: preparedFarmCoordinates,
+        coordinateSystem: coordinateSystem || 'WGS84',
+        farmArea: parsedFarmArea,
+        farmElevation: parsedFarmElevation,
+        year: parsedYear,
+        yieldSeason: yieldSeason || null,
+        crop: crop || null,
+        quantity: parsedQuantity,
+      };
+
+      console.log('Final farm data to insert (JSON fields excluded for testing):', JSON.stringify(farmData, null, 2));
+
+      // Try to create farm with retry logic
+      const farm = await withRetry(async () => {
+        return await prisma.farm.create({
+          data: farmData,
+          include: {
+            farmer: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                nin: true,
+              }
             }
           }
-        }
+        });
       });
 
       // Automatically update farmer status when farm is added

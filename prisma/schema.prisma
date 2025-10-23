@@ -132,6 +132,7 @@ model Farm {
   id                  String   @id @default(cuid())
   farmSize            Float?
   primaryCrop         String?
+  secondaryCrop       String?
   produceCategory     String?
   farmOwnership       String?
   farmState           String?
@@ -139,7 +140,6 @@ model Farm {
   farmingSeason       String?
   farmWard            String?
   farmPollingUnit     String?
-  secondaryCrop       String?
   farmingExperience   Int?
   farmLatitude        Float?
   farmLongitude       Float?
@@ -153,7 +153,7 @@ model Farm {
   farmElevation       Float?
   year                Float?
   yieldSeason         String?
-  crop                Float?
+  crop                String?
   quantity            Float?
   farmerId            String
   createdAt           DateTime @default(now())

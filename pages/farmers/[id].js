@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import Layout from '../../components/Layout'
 import Link from 'next/link'
 import { usePermissions, PERMISSIONS } from '../../components/PermissionProvider'
+import { formatValue } from '../../lib/textUtils'
 import { 
   UserIcon,
   PhoneIcon,
@@ -26,12 +27,6 @@ export default function FarmerDetails() {
   const [farmer, setFarmer] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
-  // Helper function to capitalize text
-  const capitalize = (text) => {
-    if (!text) return ''
-    return text.toString().toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
-  }
 
   // Helper function to format date
   const formatDate = (dateString) => {
@@ -162,7 +157,7 @@ export default function FarmerDetails() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {capitalize(farmer.firstName)} {capitalize(farmer.lastName)}
+                  {formatValue(farmer.firstName)} {formatValue(farmer.lastName)}
                 </h1>
                 <p className="text-sm text-gray-500">Farmer ID: {farmer.id}</p>
               </div>
@@ -172,7 +167,7 @@ export default function FarmerDetails() {
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-red-100 text-red-800'
                 }`}>
-                  {capitalize(farmer.status || 'active')}
+                  {formatValue(farmer.status || 'active')}
                 </span>
                 
                 {/* Certificate Actions */}
@@ -249,7 +244,7 @@ export default function FarmerDetails() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Gender</label>
-                    <span className="text-sm text-gray-900">{capitalize(farmer.gender)}</span>
+                    <span className="text-sm text-gray-900">{formatValue(farmer.gender)}</span>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">WhatsApp Number</label>
@@ -260,7 +255,7 @@ export default function FarmerDetails() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Employment Status</label>
-                    <span className="text-sm text-gray-900">{capitalize(farmer.employmentStatus) || 'Not provided'}</span>
+                    <span className="text-sm text-gray-900">{formatValue(farmer.employmentStatus) || 'Not provided'}</span>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Registration Status</label>
@@ -289,19 +284,19 @@ export default function FarmerDetails() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">State</label>
-                    <span className="text-sm text-gray-900">{capitalize(farmer.state)}</span>
+                    <span className="text-sm text-gray-900">{formatValue(farmer.state)}</span>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Local Government Area</label>
-                    <span className="text-sm text-gray-900">{capitalize(farmer.lga)}</span>
+                    <span className="text-sm text-gray-900">{formatValue(farmer.lga)}</span>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Ward</label>
-                    <span className="text-sm text-gray-900">{capitalize(farmer.ward)}</span>
+                    <span className="text-sm text-gray-900">{formatValue(farmer.ward)}</span>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Polling Unit</label>
-                    <span className="text-sm text-gray-900">{capitalize(farmer.pollingUnit)}</span>
+                    <span className="text-sm text-gray-900">{formatValue(farmer.pollingUnit)}</span>
                   </div>
                 </div>
                 {farmer.address && (
@@ -309,7 +304,7 @@ export default function FarmerDetails() {
                     <label className="block text-sm font-medium text-gray-700">Full Address</label>
                     <div className="mt-1 flex items-start">
                       <MapPinIcon className="h-5 w-5 text-gray-400 mr-2 mt-0.5" />
-                      <span className="text-sm text-gray-900">{capitalize(farmer.address)}</span>
+                      <span className="text-sm text-gray-900">{formatValue(farmer.address)}</span>
                     </div>
                   </div>
                 )}
@@ -332,7 +327,7 @@ export default function FarmerDetails() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Bank Name</label>
-                    <span className="text-sm text-gray-900">{capitalize(farmer.bankName) || 'Not provided'}</span>
+                    <span className="text-sm text-gray-900">{formatValue(farmer.bankName) || 'Not provided'}</span>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Account Number</label>
@@ -340,7 +335,7 @@ export default function FarmerDetails() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Account Name</label>
-                    <span className="text-sm text-gray-900">{capitalize(farmer.accountName) || 'Not provided'}</span>
+                    <span className="text-sm text-gray-900">{formatValue(farmer.accountName) || 'Not provided'}</span>
                   </div>
                 </div>
               </div>
@@ -359,13 +354,13 @@ export default function FarmerDetails() {
                         <h4 className="font-medium text-gray-900">Referee {index + 1}</h4>
                         <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                           <div>
-                            <span className="font-medium">Name:</span> {capitalize(referee.name || `${referee.firstName} ${referee.lastName}`)}
+                            <span className="font-medium">Name:</span> {formatValue(referee.name || `${referee.firstName} ${referee.lastName}`)}
                           </div>
                           <div>
                             <span className="font-medium">Phone:</span> {referee.phone}
                           </div>
                           <div>
-                            <span className="font-medium">Relationship:</span> {capitalize(referee.relationship)}
+                            <span className="font-medium">Relationship:</span> {formatValue(referee.relationship)}
                           </div>
                         </div>
                       </div>
@@ -436,25 +431,25 @@ export default function FarmerDetails() {
                           <span className="font-medium">Farm Size:</span> {farm.farmSize ? `${farm.farmSize} hectares` : 'Not specified'}
                         </div>
                         <div>
-                          <span className="font-medium">Primary Crop:</span> {capitalize(farm.primaryCrop) || 'Not specified'}
+                          <span className="font-medium">Primary Crop:</span> {formatValue(farm.primaryCrop) || 'Not specified'}
                         </div>
                         <div>
-                          <span className="font-medium">Secondary Crop:</span> {capitalize(farm.secondaryCrop) || 'Not specified'}
+                          <span className="font-medium">Secondary Crop:</span> {formatValue(farm.secondaryCrop) || 'Not specified'}
                         </div>
                         <div>
-                          <span className="font-medium">Farm Ownership:</span> {capitalize(farm.farmOwnership) || 'Not specified'}
+                          <span className="font-medium">Farm Ownership:</span> {formatValue(farm.farmOwnership) || 'Not specified'}
                         </div>
                         <div>
-                          <span className="font-medium">Farm State:</span> {capitalize(farm.farmState) || 'Not specified'}
+                          <span className="font-medium">Farm State:</span> {formatValue(farm.farmState) || 'Not specified'}
                         </div>
                         <div>
-                          <span className="font-medium">Farm LGA:</span> {capitalize(farm.farmLocalGovernment) || 'Not specified'}
+                          <span className="font-medium">Farm LGA:</span> {formatValue(farm.farmLocalGovernment) || 'Not specified'}
                         </div>
                         <div>
-                          <span className="font-medium">Farm Ward:</span> {capitalize(farm.farmWard) || 'Not specified'}
+                          <span className="font-medium">Farm Ward:</span> {formatValue(farm.farmWard) || 'Not specified'}
                         </div>
                         <div>
-                          <span className="font-medium">Farming Season:</span> {capitalize(farm.farmingSeason) || 'Not specified'}
+                          <span className="font-medium">Farming Season:</span> {formatValue(farm.farmingSeason) || 'Not specified'}
                         </div>
                       </div>
                     </div>

@@ -231,9 +231,37 @@ export default function Farmers() {
       if (response.ok) {
         const data = await response.json()
         setAnalytics(data.analytics)
+      } else if (response.status === 503) {
+        // Database temporarily unavailable
+        console.warn('Database temporarily unavailable for analytics')
+        setAnalytics({
+          overview: {
+            totalFarmers: 0,
+            totalHectares: 0,
+            totalFarms: 0,
+            verificationRate: 0,
+            farmRegistrationRate: 0
+          },
+          topStates: [],
+          topLGAs: [],
+          topCrops: []
+        })
       }
     } catch (error) {
       console.error('Error fetching analytics:', error)
+      // Set empty analytics to prevent UI from crashing
+      setAnalytics({
+        overview: {
+          totalFarmers: 0,
+          totalHectares: 0,
+          totalFarms: 0,
+          verificationRate: 0,
+          farmRegistrationRate: 0
+        },
+        topStates: [],
+        topLGAs: [],
+        topCrops: []
+      })
     }
   }
 
