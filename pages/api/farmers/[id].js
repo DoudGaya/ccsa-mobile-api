@@ -213,6 +213,14 @@ async function updateFarmer(req, res, id) {
       include: {
         referees: true,
         certificates: true,
+        cluster: {
+          select: {
+            id: true,
+            title: true,
+            clusterLeadFirstName: true,
+            clusterLeadLastName: true,
+          },
+        },
         agent: {
           select: {
             id: true,

@@ -12,6 +12,7 @@ import {
   PencilIcon,
   FunnelIcon as FilterIcon,
   ArrowDownTrayIcon,
+  MapIcon,
 } from '@heroicons/react/24/outline'
 
 export default function Farmers() {
@@ -25,7 +26,8 @@ export default function Farmers() {
   const [filters, setFilters] = useState({
     state: '',
     gender: '',
-    status: 'all'
+    status: 'all',
+    cluster: ''
   })
   const [pagination, setPagination] = useState({
     page: 1,
@@ -46,6 +48,7 @@ export default function Farmers() {
     topCrops: []
   })
   const [availableStates, setAvailableStates] = useState([])
+  const [availableClusters, setAvailableClusters] = useState([])
 
   useEffect(() => {
     console.log('Farmers Page - Effect triggered:', { 
@@ -95,6 +98,7 @@ export default function Farmers() {
     fetchFarmers()
     fetchAnalytics()
     fetchAvailableStates()
+    fetchAvailableClusters()
   }, [session, status, pagination.page, hasPermission, permissionsLoading])
 
   useEffect(() => {
@@ -168,6 +172,9 @@ export default function Farmers() {
       }
       if (filters.gender) {
         params.append('gender', filters.gender)
+      }
+      if (filters.cluster) {
+        params.append('cluster', filters.cluster)
       }
       
       if (searchTerm) params.append('search', searchTerm)
@@ -283,6 +290,9 @@ export default function Farmers() {
       if (filters.gender) {
         params.append('gender', filters.gender)
       }
+      if (filters.cluster) {
+        params.append('cluster', filters.cluster)
+      }
       if (searchTerm) {
         params.append('search', searchTerm)
       }
@@ -309,6 +319,8 @@ export default function Farmers() {
         'Date of Birth': farmer.dateOfBirth ? new Date(farmer.dateOfBirth).toLocaleDateString() : '',
         'State': farmer.state || '',
         'LGA': farmer.lga || '',
+        'Cluster': farmer.cluster?.title || '',
+        'Cluster Lead': farmer.cluster ? `${farmer.cluster.clusterLeadFirstName} ${farmer.cluster.clusterLeadLastName}` : '',
         'Ward': farmer.ward || '',
         'Status': farmer.status || '',
         'Agent ID': farmer.agentId || '',
@@ -412,6 +424,19 @@ export default function Farmers() {
         { name: 'Yobe', code: 'YO' },
         { name: 'Zamfara', code: 'ZA' }
       ])
+    }
+  }
+
+  const fetchAvailableClusters = async () => {
+    try {
+      const response = await fetch('/api/clusters?limit=1000')
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableClusters(data.clusters || [])
+      }
+    } catch (error) {
+      console.error('Error fetching clusters:', error)
+      setAvailableClusters([])
     }
   }
 
@@ -635,6 +660,20 @@ export default function Farmers() {
               <option value="Validated">Validated</option>
               <option value="Verified">Verified</option>
             </select>
+
+            {/* Cluster Filter */}
+            <select
+              className="form-input"
+              value={filters.cluster}
+              onChange={(e) => setFilters({ ...filters, cluster: e.target.value })}
+            >
+              <option value="">All Clusters</option>
+              {availableClusters.map(cluster => (
+                <option key={cluster.id} value={cluster.id}>
+                  {cluster.title} ({cluster._count?.farmers || 0} farmers)
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -649,6 +688,7 @@ export default function Farmers() {
                   <th className="table-header-cell">Phone</th>
                   <th className="table-header-cell">State</th>
                   <th className="table-header-cell">LGA</th>
+                  <th className="table-header-cell">Cluster</th>
                   <th className="table-header-cell">Registration Date</th>
                   <th className="table-header-cell">Status</th>
                   <th className="table-header-cell">Actions</th>
@@ -667,6 +707,18 @@ export default function Farmers() {
                     <td className="table-cell">{farmer.phone || farmer.phoneNumber}</td>
                     <td className="table-cell">{farmer.state}</td>
                     <td className="table-cell">{farmer.lga || farmer.localGovernment}</td>
+                    <td className="table-cell">
+                      {farmer.cluster ? (
+                        <div>
+                          <div className="font-medium text-gray-900">{farmer.cluster.title}</div>
+                          <div className="text-gray-500 text-xs">
+                            Lead: {farmer.cluster.clusterLeadFirstName} {farmer.cluster.clusterLeadLastName}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">No cluster assigned</span>
+                      )}
+                    </td>
                     <td className="table-cell">{formatDate(farmer.createdAt)}</td>
                     <td className="table-cell">
                       <div className="flex items-center space-x-2">
@@ -720,6 +772,13 @@ export default function Farmers() {
                           title="View Certificate"
                         >
                           <DocumentTextIcon className="h-5 w-5" />
+                        </Link>
+                        <Link
+                          href={`/farms?farmerId=${farmer.id}`}
+                          className="text-purple-600 hover:text-purple-900"
+                          title="View Farmer's Farms"
+                        >
+                          <MapIcon className="h-5 w-5" />
                         </Link>
                       </div>
                     </td>

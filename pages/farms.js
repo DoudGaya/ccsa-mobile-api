@@ -47,6 +47,7 @@ export default function Farms() {
     avgLandSize: 0,
     topCrops: []
   })
+  const [farmerInfo, setFarmerInfo] = useState(null)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -63,7 +64,16 @@ export default function Farms() {
       setLoading(true)
       setError(null)
       
-      const response = await fetch('/api/farms')
+      // Build query parameters
+      const params = new URLSearchParams()
+      if (router.query.farmerId) {
+        params.append('farmerId', router.query.farmerId)
+      }
+      
+      const queryString = params.toString()
+      const url = queryString ? `/api/farms?${queryString}` : '/api/farms'
+      
+      const response = await fetch(url)
       if (!response.ok) {
         throw new Error('Failed to fetch farms')
       }
@@ -76,11 +86,30 @@ export default function Farms() {
       
       // Calculate stats
       calculateStats(farmsData)
+      
+      // Fetch farmer info if filtering by farmer
+      if (router.query.farmerId) {
+        await fetchFarmerInfo(router.query.farmerId)
+      } else {
+        setFarmerInfo(null)
+      }
     } catch (err) {
       console.error('Error fetching farms:', err)
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchFarmerInfo = async (farmerId) => {
+    try {
+      const response = await fetch(`/api/farmers/${farmerId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setFarmerInfo(data.farmer)
+      }
+    } catch (err) {
+      console.error('Error fetching farmer info:', err)
     }
   }
 
@@ -282,10 +311,25 @@ export default function Farms() {
         {/* Header */}
         <div className="sm:flex sm:items-center">
           <div className="sm:flex-auto">
-            <h1 className="text-2xl font-semibold text-gray-900">Farm Management</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {farmerInfo ? `Farms for ${farmerInfo.firstName} ${farmerInfo.lastName}` : 'Farm Management'}
+            </h1>
             <p className="mt-2 text-sm text-gray-700">
-              Manage and monitor farm data, locations, and agricultural information.
+              {farmerInfo 
+                ? `View and manage all farms registered by ${farmerInfo.firstName} ${farmerInfo.lastName}.`
+                : 'Manage and monitor farm data, locations, and agricultural information.'
+              }
             </p>
+            {farmerInfo && (
+              <div className="mt-2">
+                <Link
+                  href="/farmers"
+                  className="text-blue-600 hover:text-blue-900 text-sm"
+                >
+                  ← Back to Farmers
+                </Link>
+              </div>
+            )}
           </div>
           <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
             {/* <Link

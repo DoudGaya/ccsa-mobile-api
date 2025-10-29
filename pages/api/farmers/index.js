@@ -67,6 +67,7 @@ async function getFarmers(req, res) {
       limit = 10, 
       search = '', 
       state = '', 
+      cluster = '',
       status // No default - mobile agents should see all their farmers regardless of status
     } = req.query;
 
@@ -80,6 +81,7 @@ async function getFarmers(req, res) {
       ...(req.isAdmin ? {} : { agentId: req.user?.uid }),
       ...(status && { status }), // Only filter by status if explicitly provided
       ...(state && { state }),
+      ...(cluster && { clusterId: cluster }),
       ...(search && {
         OR: [
           { nin: { contains: search, mode: 'insensitive' } },
@@ -217,6 +219,9 @@ async function createFarmer(req, res) {
       accountNumber: bankInfo.accountNumber,
       bvn: bankInfo.bvn,
       
+      // Cluster assignment
+      clusterId: contactInfo.cluster || null, // Extract cluster ID from contact info
+      
       // Agent assignment
       agentId: req.user.uid,
     };
@@ -291,6 +296,14 @@ async function createFarmer(req, res) {
       include: {
         referees: true,
         farms: true,
+        cluster: {
+          select: {
+            id: true,
+            title: true,
+            clusterLeadFirstName: true,
+            clusterLeadLastName: true,
+          },
+        },
         agent: {
           select: {
             id: true,

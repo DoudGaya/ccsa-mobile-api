@@ -163,6 +163,13 @@ export default function FarmDetail() {
             </div>
             <div className="flex space-x-3">
               <Link
+                href={`/farmers/${farm.farmer?.id}`}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <UserIcon className="h-4 w-4 mr-2" />
+                View Farmer
+              </Link>
+              <Link
                 href={`/farms/${farm.id}/edit`}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-ccsa-blue"
               >

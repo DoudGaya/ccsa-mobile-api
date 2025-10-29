@@ -309,7 +309,7 @@ export default function FarmerCertificate() {
                   <h2 className="text-2xl font-bold text-gray-800 tracking-wide">
                     FARMER REGISTRATION CERTIFICATE
                   </h2>
-                  <p className="text-sm text-green-700 mt-1">Centre for CLimate-Smart Agriculture (CCSA)</p>
+                  <p className="text-sm text-green-700 mt-1">Centre for Climate-Smart Agriculture (CCSA)</p>
                 </div>
               </div>
 
