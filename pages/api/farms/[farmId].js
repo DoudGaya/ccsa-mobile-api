@@ -115,6 +115,29 @@ export default async function handler(req, res) {
       delete updateData.createdAt;
       delete updateData.updatedAt;
 
+      // Handle JSON fields (farmPolygon and farmCoordinates)
+      if (updateData.farmPolygon !== undefined) {
+        if (updateData.farmPolygon && Array.isArray(updateData.farmPolygon) && updateData.farmPolygon.length > 0) {
+          // Clean the polygon data - ensure proper format
+          updateData.farmPolygon = updateData.farmPolygon.map(point => ({
+            latitude: point.latitude,
+            longitude: point.longitude,
+            timestamp: point.timestamp || null,
+            accuracy: point.accuracy || null
+          }));
+        } else {
+          updateData.farmPolygon = null;
+        }
+      }
+
+      if (updateData.farmCoordinates !== undefined) {
+        if (updateData.farmCoordinates) {
+          updateData.farmCoordinates = JSON.parse(JSON.stringify(updateData.farmCoordinates));
+        } else {
+          updateData.farmCoordinates = null;
+        }
+      }
+
       // Convert string values to appropriate types for numeric fields
       if (updateData.farmSize !== undefined) {
         updateData.farmSize = updateData.farmSize ? parseFloat(updateData.farmSize) : null;

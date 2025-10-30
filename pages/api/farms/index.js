@@ -211,12 +211,11 @@ export default async function handler(req, res) {
         farmingExperience: parsedFarmingExperience,
         farmLatitude: parsedFarmLatitude,
         farmLongitude: parsedFarmLongitude,
-        // Temporarily exclude JSON fields to test if they're causing the issue
-        // farmPolygon: preparedFarmPolygon,
+        farmPolygon: preparedFarmPolygon,
         soilType: soilType || null,
         soilPH: parsedSoilPH,
         soilFertility: soilFertility || null,
-        // farmCoordinates: preparedFarmCoordinates,
+        farmCoordinates: preparedFarmCoordinates,
         coordinateSystem: coordinateSystem || 'WGS84',
         farmArea: parsedFarmArea,
         farmElevation: parsedFarmElevation,
@@ -226,7 +225,7 @@ export default async function handler(req, res) {
         quantity: parsedQuantity,
       };
 
-      console.log('Final farm data to insert (JSON fields excluded for testing):', JSON.stringify(farmData, null, 2));
+      console.log('Final farm data to insert:', JSON.stringify(farmData, null, 2));
 
       // Try to create farm with retry logic
       const farm = await withRetry(async () => {
