@@ -89,27 +89,44 @@ async function handler(req, res) {
       take: 10
     });
 
-    // Get top secondary crops
-    const topSecondaryCrops = await prisma.farm.groupBy({
-      by: ['secondaryCrop'],
-      _count: {
-        id: true
-      },
-      _sum: {
+    // Get top secondary crops (manual processing since secondaryCrop is an array)
+    const farmsWithSecondaryCrops = await prisma.farm.findMany({
+      select: {
+        secondaryCrop: true,
         farmSize: true
       },
       where: {
-        secondaryCrop: {
-          not: null
+        NOT: {
+          secondaryCrop: { isEmpty: true }
         }
-      },
-      orderBy: {
-        _count: {
-          id: 'desc'
-        }
-      },
-      take: 5
+      }
+    });                                   
+
+    // Process secondary crops manually
+    const secondaryCropMap = {};
+    farmsWithSecondaryCrops.forEach(farm => {
+      if (farm.secondaryCrop && Array.isArray(farm.secondaryCrop)) {
+        farm.secondaryCrop.forEach(crop => {
+          const cleanCrop = crop.replace(/[{}]/g, '').trim();
+          if (cleanCrop) {
+            if (!secondaryCropMap[cleanCrop]) {
+              secondaryCropMap[cleanCrop] = {
+                secondaryCrop: cleanCrop,
+                _count: { id: 0 },
+                _sum: { farmSize: 0 }
+              };
+            }
+            secondaryCropMap[cleanCrop]._count.id += 1;
+            secondaryCropMap[cleanCrop]._sum.farmSize += parseFloat(farm.farmSize) || 0;
+          }
+        });
+      }
     });
+
+    // Convert to array and sort
+    const topSecondaryCrops = Object.values(secondaryCropMap)
+      .sort((a, b) => b._count.id - a._count.id)
+      .slice(0, 5);
 
     // Get farm size distribution
     const farmSizeRanges = [

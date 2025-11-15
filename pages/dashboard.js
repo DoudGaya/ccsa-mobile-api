@@ -97,7 +97,7 @@ export default function Dashboard() {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M'
     } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K'
+      return (num / 1000).toFixed(1) + ('K')
     }
     return num?.toLocaleString() || 0
   }
@@ -264,7 +264,7 @@ export default function Dashboard() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
       </Layout>
-    )
+    )             
   }
 
   if (!session) {
@@ -293,38 +293,38 @@ export default function Dashboard() {
     <Layout title="Dashboard">
       <div className="space-y-6">
         {/* Welcome Section with Goal Progress */}
-        <div className="bg-gradient-to-r from-green-600 to-green-700 text-white overflow-hidden shadow rounded-lg">
-          <div className="px-6 py-8">
+        <div className=" border border-gray-200 rounded-lg bg-white  ">
+          <div className="px-6 py-4">
             <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h3 className="text-2xl font-bold mb-2">
-                  Welcome back, {session.user.name || session.user.email}!
+              <div className="flex-1 ">
+                <h3 className="text-2xl font-sans font-bold mb-2">
+                  {session.user.name || session.user.email}
                 </h3>
-                <p className="text-green-100 mb-4">
-                  Farmer Registration Management System
+                <p className=" textblue-950 mb-4">
+                  Farmer Information Management System (FIMS)
                 </p>
                 
                 {/* Goal Progress */}
-                <div className="bg-white bg-opacity-20 rounded-lg p-4">
+                <div className=" rounded-lg py-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Goal : 2 Million Farmers</span>
+                    <span className="text-sm font-medium">Target 2 Million Farmers by 2026</span>
                     <span className="text-lg font-bold">{overview.progressPercentage}%</span>
                   </div>
-                  <div className="w-full bg-white bg-opacity-30 rounded-full h-3">
+                  <div className="w-full bg-gray-500 bg-opacity-30 rounded-md h-4">
                     <div 
-                      className="bg-white h-3 rounded-full transition-all duration-500" 
+                      className=" bg-blue-900 h-4 rounded-md transition-all duration-500" 
                       style={{ width: `${Math.min(overview.progressPercentage, 100)}%` }}
                     ></div>
                   </div>
-                  <div className="flex justify-between text-xs mt-2 text-green-100">
-                    <span>{formatNumber(overview.totalFarmers)} registered</span>
-                    <span>{formatNumber(overview.remaining)} remaining</span>
+                  <div className="flex justify-between text-xs mt-2 text-black">
+                    <span className=' font-semibold'>{formatNumber(overview.totalFarmers)} registered</span>
+                    <span className=' font-semibold'>{formatNumber(overview.remaining)}</span>
                   </div>
                 </div>
               </div>
               
               <div className="ml-8">
-                <TrophyIcon className="h-20 w-20 text-yellow-300" />
+                {/* <TrophyIcon className="h-20 w-20 text-yellow-300" /> */}
               </div>
             </div>
           </div>
@@ -332,54 +332,54 @@ export default function Dashboard() {
 
         {/* Main Stats Grid */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow duration-200 cursor-pointer" onClick={() => router.push('/farmers')}>
-            <div className="p-5">
+          <div className="bg-white overflow-hidden shadow rounded-md hover:shadow-lg transition-shadow duration-200 cursor-pointer" onClick={() => router.push('/farmers')}>
+            <div className="p-2">
               <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="bg-blue-500 rounded-md p-3">
-                    <UsersIcon className="h-6 w-6 text-white" />
+                <div className="flex-shrink-0 h-full">
+                  <div className=" rounded-md bg-blue-900/20 p-3">
+                    <UsersIcon className="h-12 w-12 text-blue-950" />
                   </div>
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
+                    <dd className="text-4xl font-semibold font-sans text-gray-900">{formatNumber(overview.totalFarmers)}</dd>
                     <dt className="text-sm font-medium text-gray-500 truncate">Farmers</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{formatNumber(overview.totalFarmers)}</dd>
                   </dl>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow duration-200 cursor-pointer" onClick={() => router.push('/agents')}>
-            <div className="p-5">
+          <div className="bg-white overflow-hidden shadow rounded-md hover:shadow-lg transition-shadow duration-200 cursor-pointer" onClick={() => router.push('/agents')}>
+            <div className="p-2">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="bg-green-500 rounded-md p-3">
-                    <UserGroupIcon className="h-6 w-6 text-white" />
+                  <div className="rounded-md bg-blue-900/20 p-3">
+                    <UserGroupIcon className="h-12 w-12 text-blue-950" />
                   </div>
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate"> Agents</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{formatNumber(overview.totalAgents)}</dd>
+                    <dd className="text-4xl font-semibold font-sans text-gray-900">{formatNumber(overview.totalAgents)}</dd>
+                    <dt className="text-sm font-medium text-gray-800 truncate"> Agents</dt>
                   </dl>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow duration-200 cursor-pointer" onClick={() => router.push('/clusters')}>
-            <div className="p-5">
+          <div className="bg-white overflow-hidden shadow rounded-md hover:shadow-lg transition-shadow duration-200 cursor-pointer" onClick={() => router.push('/clusters')}>
+            <div className="p-2">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="bg-purple-500 rounded-md p-3">
-                    <BuildingOfficeIcon className="h-6 w-6 text-white" />
+                  <div className="rounded-md bg-blue-900/20 p-3">
+                    <BuildingOfficeIcon className="h-12 w-12 text-blue-950" />
                   </div>
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
+                    <dd className="text-4xl font-semibold font-sans text-gray-900">{formatNumber(overview.totalClusters)}</dd>
                     <dt className="text-sm font-medium text-gray-500 truncate">Clusters</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{formatNumber(overview.totalClusters)}</dd>
                   </dl>
                 </div>
               </div>
@@ -387,20 +387,20 @@ export default function Dashboard() {
           </div>
 
           {/* This is be card to display total hectares based on the hectace calculation utility */}
-          <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow duration-200 cursor-pointer" onClick={() => router.push('/farms')}>
-            <div className="p-5">
+          <div className="bg-white overflow-hidden shadow rounded-md hover:shadow-lg transition-shadow duration-200 cursor-pointer" onClick={() => router.push('/farms')}>
+            <div className="p-2">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="bg-yellow-500 rounded-md p-3">
-                    <GlobeAltIcon className="h-6 w-6 text-white" />
+                  <div className="bg-blue-900/20 rounded-md p-3">
+                    <GlobeAltIcon className="h-12 w-12 text-blue-950" />
                   </div>
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Hectares</dt>
-                    <dd className="text-2xl font-bold text-gray-900">
-                      {formatNumber(overview.totalHectares)} ha
+                    <dd className="text-4xl font-semibold font-sans text-gray-900">
+                      {formatNumber(overview.totalHectares)}
                     </dd>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Hectares</dt>
                   </dl>
                 </div>
               </div>
@@ -409,9 +409,9 @@ export default function Dashboard() {
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Monthly Trends Chart */}
-          <div className="lg:col-span-2 bg-white shadow rounded-lg">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+           {/* Monthly Trends Chart */}
+          <div className=" bg-white shadow rounded-lg">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 flex items-center">
                 <ChartBarIcon className="h-5 w-5 mr-2 text-blue-500" />
@@ -434,8 +434,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          
-          {/* Gender Distribution */}
+             {/* Gender Distribution */}
           <div className="bg-white shadow rounded-lg">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Gender Distribution</h3>
@@ -456,10 +455,100 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Goal Progress Chart */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+             {/* Top Crops Chart */}
+          <div className=" bg-white col-span-2 p-2 shadow rounded-lg">
+            <div className="px-6 py-4 bg-gray-100 rounded-lg border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Top Registered Crops/Animals</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {crops?.totalCrops || 0} different crops • {crops?.topCrops?.reduce((sum, crop) => sum + crop.count, 0) || 0} Total registrations • Click to view farmers
+              </p>
+            </div>
+            <div className=" py-2">
+              <div className=" grid grid-cols-3 gap-4">
+                {(crops?.topCrops || []).slice(0, 9).map((crop, index) => {
+                  const maxCount = Math.max(...(crops?.topCrops || []).slice(0, 9).map(c => c.count))
+                  const relativePercentage = maxCount > 0 ? (crop.count / maxCount) * 100 : 0
+                    const colors = [
+                    'bg-green-500', 'bg-green-500', 'bg-green-500', 'bg-green-500',
+                    'bg-green-500', 'bg-green-500', 'bg-green-500', 'bg-green-500'
+                  ]
+                  
+                  // const colors = [
+                  //   'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500',
+                  //   'bg-pink-500', 'bg-indigo-500', 'bg-red-500', 'bg-orange-500'
+                  // ]
+                  
+                  return (
+                    <div 
+                      key={crop.crop} 
+                      className="flex flex-col shadow-md mt-6 border p-1 rounded-lg hover:bg-gray-white hover:shadow-md hover:drop-shadow-md transition-colors cursor-pointer"
+                      onClick={() => router.push(`/filtered-farmers?type=crop&value=${encodeURIComponent(crop.crop)}&label=${encodeURIComponent(crop.crop)}`)}
+                    >
+                      <div className="flex flex-col ">
+                        {/* <div className={`w-3 h-3 rounded-full ${colors[index % colors.length]} mr-3`}></div> */}
+                        <div className=' p-2 rounded-lg mb-2 flex  space-x-2'>
+                        
+      
+                         <div className=' flex space-y-3 flex-col items-start w-full'>
+                          <div className=' flex items-end space-x-1' >
+                            <span className="text-4xl font-sans font-semibold text-gray-600">
+                              {formatNumber(crop.count)}
+                            </span>
+                             <p className=' text-lg text-gray-600 font-semibold'>{crop.crop}</p>
+                          </div>
+                          
+                           <div className=' flex items-end justify-end text-right'>
+                            <div className="text-xs flex text-end space-x-2  items-end justify-end text-gray-500">
+                              <span className=' bg-green-600/20 text-end py-1 rounded-full text-green-950 font-semibold px-3 max-w-max'>{crop.primary || 0} Primary</span>
+                              <span className=' max-w-max font-semibold bg-yellow-600/20 py-1 rounded-full text-yellow-900 px-3'>{crop.secondary || 0} Secondary</span>
+                           </div>
+                           </div>
+                          </div>
+
+                           <div className='flex items-center justify-center h-14 w-14  rounded-lg relative '>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className=" p-1 absolute top-0 right-0 bg-green-200/40 rounded-lg stroke-green-900 size-8">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                          </svg>
+                         </div>
+                         
+                        
+                        </div>
+                        
+                        <span className="text-sm font-medium text-gray-900 capitalize w-32 truncate">
+                        </span>
+                        <div className="flex-1">
+                          <div className="w-full bg-gray-300 rounded-full h-1">
+                            <div 
+                              className={`${colors[index % colors.length].replace('bg-', 'bg-')} h-1 rounded-full transition-all duration-500`}
+                              style={{ width: `${relativePercentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right ml-4">
+                      
+                       
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              
+              {(!crops?.topCrops || crops.topCrops.length === 0) && (
+                <div className="text-center py-12 text-gray-500">
+                  <MapIcon className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg">No crop data available yet</p>
+                  <p className="text-sm">Crops will appear as farmers register their farms</p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          
+
+              {/* Goal Progress Chart */}
+        {/* <div className="grid grid-cols-1 gap-6">
           <div className="lg:col-span-1 bg-white shadow rounded-lg">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Goal Progress</h3>
@@ -487,71 +576,14 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div> */}
 
-          {/* Top Crops Chart */}
-          <div className="lg:col-span-3 bg-white shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Top Registered Crops</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                {crops?.totalCrops || 0} different crops • {crops?.topCrops?.reduce((sum, crop) => sum + crop.count, 0) || 0} total registrations • Click to view farmers
-              </p>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                {(crops?.topCrops || []).slice(0, 8).map((crop, index) => {
-                  const maxCount = Math.max(...(crops?.topCrops || []).slice(0, 8).map(c => c.count))
-                  const relativePercentage = maxCount > 0 ? (crop.count / maxCount) * 100 : 0
-                  const colors = [
-                    'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500',
-                    'bg-pink-500', 'bg-indigo-500', 'bg-red-500', 'bg-orange-500'
-                  ]
-                  
-                  return (
-                    <div 
-                      key={crop.crop} 
-                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
-                      onClick={() => router.push(`/filtered-farmers?type=crop&value=${encodeURIComponent(crop.crop)}&label=${encodeURIComponent(crop.crop)}`)}
-                    >
-                      <div className="flex items-center flex-1">
-                        <div className={`w-3 h-3 rounded-full ${colors[index % colors.length]} mr-3`}></div>
-                        <span className="text-sm font-medium text-gray-900 capitalize w-32 truncate">
-                          {crop.crop}
-                        </span>
-                        <div className="flex-1 mx-4">
-                          <div className="w-full bg-gray-200 rounded-full h-3">
-                            <div 
-                              className={`${colors[index % colors.length].replace('bg-', 'bg-')} h-3 rounded-full transition-all duration-500`}
-                              style={{ width: `${relativePercentage}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right ml-4">
-                        <span className="text-lg font-bold text-gray-900">
-                          {formatNumber(crop.count)}
-                        </span>
-                        <div className="text-xs text-gray-500">
-                          Primary: {crop.primary || 0} • Secondary: {crop.secondary || 0}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              
-              {(!crops?.topCrops || crops.topCrops.length === 0) && (
-                <div className="text-center py-12 text-gray-500">
-                  <MapIcon className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">No crop data available yet</p>
-                  <p className="text-sm">Crops will appear as farmers register their farms</p>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
+    
+
         {/* Geographic and Cluster Analysis */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           {/* Top States */}
           <div className="bg-white shadow rounded-lg">
             <div className="px-6 py-4 border-b border-gray-200">
@@ -562,8 +594,8 @@ export default function Dashboard() {
               <p className="text-sm text-gray-500 mt-1">Geographic distribution across Nigeria • Click to view farmers</p>
             </div>
             <div className="p-6">
-              <div className="space-y-4">
-                {geography.byState.slice(0, 10).map((state, index) => {
+              <div className=" grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {geography.byState.slice(0, 12).map((state, index) => {
                   const maxCount = Math.max(...geography.byState.slice(0, 10).map(s => s.count))
                   const relativePercentage = maxCount > 0 ? (state.count / maxCount) * 100 : 0
                   const statePercentage = overview.totalFarmers > 0 ? (state.count / overview.totalFarmers) * 100 : 0
@@ -615,11 +647,12 @@ export default function Dashboard() {
                 Cluster Performance
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                {clusters.activeClusters} active • {clusters.totalClusters} total clusters • Click to view farmers
+                {/* {clusters.activeClusters} active  */}
+               <span className=' bg-green-300/30 text-green-950 font-semibold rounded-full px-3'> {clusters.totalClusters} total Clusters </span>
               </p>
             </div>
             <div className="p-6">
-              <div className="space-y-4">
+              <div className=" gap-4 grid grid-cols-3">
                 {clusters.byClusters.slice(0, 8).map((cluster, index) => {
                   const maxFarmers = Math.max(...clusters.byClusters.map(c => c.farmersCount));
                   const barWidth = maxFarmers > 0 ? (cluster.farmersCount / maxFarmers) * 100 : 0;
@@ -627,38 +660,42 @@ export default function Dashboard() {
                   return (
                     <div 
                       key={cluster.clusterId} 
-                      className="border rounded-lg p-4 hover:bg-purple-50 transition-colors cursor-pointer"
+                      className=" bg-stone-100 rounded-lg hover:bg-stone-50 pt-10 px-4 p-1 transition-colors cursor-pointer"
                       onClick={() => router.push(`/filtered-farmers?type=cluster&value=${encodeURIComponent(cluster.clusterId)}&label=${encodeURIComponent(cluster.clusterTitle)}`)}
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="inline-flex items-center justify-center w-6 h-6 bg-purple-100 text-purple-600 text-xs font-bold rounded-full">
-                              {index + 1}
-                            </span>
-                            <h4 className="text-sm font-bold text-gray-900 truncate">
+                      <div className="flex w-full flex-col text-center items-center justify-between mb-3">
+                        <div className="flex-1 flex w-full flex-col items-center justify-center">
+                          <div className="flex flex-col items-center text-center mb-1">
+                             <BuildingOfficeIcon className="h-16 w-16 pt-5 stroke-slate-800" />
+                            <h4 className="text-lg max-w-[300px] font-bold px-3 text-gray-900 line-clamp-2">
                               {cluster.clusterTitle}
                             </h4>
-                            {cluster.isActive && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Active
-                              </span>
-                            )}
                           </div>
-                          <p className="text-xs text-gray-500 mb-2">
+                          <p className="text-lg text-gray-800 font-semibold  line-clamp-1 mb-2">
                             {cluster.clusterDescription}
                           </p>
-                          {cluster.clusterLeadName && (
-                            <p className="text-xs text-gray-600">
-                              Lead: {cluster.clusterLeadName}
+                         <div className=' flex py-4 bg-white p-2 rounded-lg items-center justify-between w-full'>
+                          
+                           {cluster.clusterLeadName && (
+                           <div className='text-start'>
+                            <p className="text-xs font-semibold font-sans text-gray-800">Cluster Lead:</p>
+                             <p className="text-md font-semibold font-sans text-gray-700">
+                              {cluster.clusterLeadName}
                             </p>
+                           </div>
                           )}
-                        </div>
-                        <div className="text-right ml-4">
-                          <div className="text-xl font-bold text-purple-600">
-                            {formatNumber(cluster.farmersCount)}
+
+                           <div className=" text-end text-gray-900">
+                            <p className=' text-xl font-semibold '>{formatNumber(cluster.farmersCount)}</p>
+                          <div className="text-xs text-gray-700">Farmers Registered</div>
                           </div>
-                          <div className="text-xs text-gray-500">farmers</div>
+
+                         </div>
+
+                          
+                        </div>
+                        <div className=" text-center ml-4 bg-whte">
+                         
                         </div>
                       </div>
                       
@@ -667,9 +704,9 @@ export default function Dashboard() {
                           <span>Performance</span>
                           <span>{cluster.progressPercentage}% of total</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-stone-400 rounded-full h-1">
                           <div 
-                            className="bg-purple-500 h-2 rounded-full transition-all duration-500"
+                            className="bg-stone-900 h-1 rounded-full transition-all duration-500"
                             style={{ width: `${barWidth}%` }}
                           ></div>
                         </div>

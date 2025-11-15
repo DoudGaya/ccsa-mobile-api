@@ -219,12 +219,20 @@ async function createFarmer(req, res) {
       accountNumber: bankInfo.accountNumber,
       bvn: bankInfo.bvn,
       
-      // Cluster assignment
-      clusterId: contactInfo.cluster || null, // Extract cluster ID from contact info
+      // Cluster assignment - required field
+      clusterId: contactInfo.cluster,
       
       // Agent assignment
       agentId: req.user.uid,
     };
+
+    // Validate that cluster is provided
+    if (!farmerData.clusterId) {
+      return res.status(400).json({ 
+        error: 'Cluster assignment is required',
+        message: 'Please select a cluster for this farmer'
+      });
+    }
 
     // Validate referees if provided
     let validatedReferees = [];

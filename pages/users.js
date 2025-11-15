@@ -15,14 +15,6 @@ import {
   AdjustmentsHorizontalIcon
 } from '@heroicons/react/24/outline'
 
-const ROLES = [
-  { id: 'SUPER_ADMIN', name: 'Super Admin', description: 'Full system access' },
-  { id: 'ADMIN', name: 'Admin', description: 'Administrative access' },
-  { id: 'MANAGER', name: 'Manager', description: 'Management level access' },
-  { id: 'AGENT', name: 'Agent', description: 'Field agent access' },
-  { id: 'USER', name: 'User', description: 'Basic user access' }
-]
-
 // Permission categories for the permissions tab
 const PERMISSION_CATEGORIES = [
   { id: 'users.create', name: 'Create Users', category: 'Users' },
@@ -138,22 +130,54 @@ export default function Users() {
   const handleCreateUser = async (e) => {
     e.preventDefault()
     try {
-      const response = await fetch('/api/users', {
-        method: 'POST',
+      // Determine if this is create or update based on editingItem
+      const isUpdate = !!editingItem && editingItem.id
+      
+      let url = '/api/users'
+      let method = 'POST'
+      let body = userForm
+      
+      if (isUpdate) {
+        // For updates, use PUT with the user ID
+        url = `/api/users/${editingItem.id}`
+        method = 'PUT'
+        // Only send fields that are being updated
+        body = {
+          displayName: userForm.name,
+          firstName: userForm.firstName || '',
+          lastName: userForm.lastName || '',
+          email: userForm.email,
+          role: userForm.role, // Role ID for RBAC
+          isActive: userForm.isActive
+        }
+        // Only include password if it was changed (not empty and not the form's initial state)
+        if (userForm.password && userForm.password !== editingItem.password) {
+          body.password = userForm.password
+        }
+      }
+
+      const response = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userForm)
+        body: JSON.stringify(body)
       })
 
       if (response.ok) {
         await fetchData()
         resetUserForm()
         setShowModal(false)
+        setEditingItem(null)
+        setError('')
       } else {
         const errorData = await response.json()
-        setError(errorData.error || 'Failed to create user')
+        const errorMessage = errorData.error || (isUpdate ? 'Failed to update user' : 'Failed to create user')
+        setError(errorMessage)
+        console.error(`Error ${isUpdate ? 'updating' : 'creating'} user:`, errorData)
       }
     } catch (error) {
-      setError('An error occurred while creating the user')
+      const errorMessage = error.message || (editingItem ? 'An error occurred while updating the user' : 'An error occurred while creating the user')
+      setError(errorMessage)
+      console.error('Error:', error)
     }
   }
 
@@ -246,16 +270,25 @@ export default function Users() {
     setModalType(type)
     setEditingItem(item)
     if (type === 'user') {
+      // Get the role ID from the user's roles array (first assigned role)
+      const assignedRoleId = item.roles && item.roles.length > 0 ? item.roles[0].id : ''
+      
       setUserForm({
         name: item.name || '',
+        firstName: item.firstName || '',
+        lastName: item.lastName || '',
         email: item.email || '',
-        role: item.role || '',
+        role: assignedRoleId, // Use the actual role ID from the user's assigned roles
         groupIds: item.groups?.map(g => g.id) || [],
         permissions: item.permissions || [],
-        isActive: item.isActive !== false
+        isActive: item.isActive !== false,
+        password: '', // Don't pre-fill password for security
+        passwordOption: 'manual', // Default to manual for updates (user can leave empty to keep current)
+        generatePassword: false,
+        sendPasswordEmail: false
       })
-    } else if (type === 'group') {
-      setGroupForm({
+    } else if (type === 'role') {
+      setRoleForm({
         name: item.name || '',
         description: item.description || '',
         permissions: item.permissions || [],
@@ -363,7 +396,7 @@ export default function Users() {
                 <KeyIcon className="h-6 w-6 text-yellow-600" />
               </div>
               <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">{ROLES.length}</h3>
+                <h3 className="text-lg font-medium text-gray-900">{roles.filter(r => r.isSystem).length || roles.length}</h3>
                 <p className="text-sm text-gray-500">System Roles</p>
               </div>
             </div>
@@ -417,7 +450,7 @@ export default function Users() {
                   className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">All Roles</option>
-                  {ROLES.map(role => (
+                  {roles.map(role => (
                     <option key={role.id} value={role.id}>{role.name}</option>
                   ))}
                 </select>

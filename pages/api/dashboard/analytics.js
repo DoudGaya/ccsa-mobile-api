@@ -61,13 +61,12 @@ export default async function handler(req, res) {
           }
         }
       }),
-      // Secondary crops - need to handle this differently as it's a string field
+      // Secondary crops - now an array field
       prisma.farm.findMany({
         select: { secondaryCrop: true },
         where: {
-          secondaryCrop: {
-            not: null,
-            not: ''
+          NOT: {
+            secondaryCrop: { isEmpty: true }
           }
         }
       })
@@ -80,14 +79,15 @@ export default async function handler(req, res) {
       type: 'primary'
     }));
 
-    // Process secondary crops (which might be comma-separated)
+    // Process secondary crops (now array instead of comma-separated string)
     const secondaryCropCounts = {};
     cropAnalytics[1].forEach(farm => {
-      if (farm.secondaryCrop) {
-        const crops = farm.secondaryCrop.split(',').map(c => c.trim());
-        crops.forEach(crop => {
-          if (crop) {
-            secondaryCropCounts[crop] = (secondaryCropCounts[crop] || 0) + 1;
+      if (farm.secondaryCrop && Array.isArray(farm.secondaryCrop)) {
+        farm.secondaryCrop.forEach(crop => {
+          // Clean up the crop value (remove {}, trim)
+          const cleanCrop = crop.replace(/[{}]/g, '').trim();
+          if (cleanCrop) {
+            secondaryCropCounts[cleanCrop] = (secondaryCropCounts[cleanCrop] || 0) + 1;
           }
         });
       }

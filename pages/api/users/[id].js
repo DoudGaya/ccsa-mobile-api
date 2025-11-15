@@ -54,7 +54,7 @@ async function updateUser(req, res, id) {
       firstName,
       lastName,
       email,
-      role,
+      role, // This is the role ID for RBAC
       groupIds = [],
       permissions = [],
       isActive
@@ -80,23 +80,95 @@ async function updateUser(req, res, id) {
       }
     }
 
-    // Update user
-    const user = await prisma.user.update({
-      where: { id },
-      data: {
-        ...(displayName && { displayName }),
-        ...(firstName && { firstName }),
-        ...(lastName && { lastName }),
-        ...(email && { email }),
-        ...(role && { role }),
-        ...(isActive !== undefined && { isActive })
+    // Get session for audit trail
+    const session = await getServerSession(req, res, authOptions)
+
+    // Update user in a transaction to handle role changes
+    const result = await prisma.$transaction(async (tx) => {
+      // If role is being updated, verify it exists and update user_roles
+      if (role) {
+        const selectedRole = await tx.roles.findUnique({
+          where: { id: role }
+        })
+
+        if (!selectedRole) {
+          throw new Error('Selected role does not exist')
+        }
+
+        // Delete existing role assignments
+        await tx.user_roles.deleteMany({
+          where: { userId: id }
+        })
+
+        // Create new role assignment
+        await tx.user_roles.create({
+          data: {
+            userId: id,
+            roleId: role,
+            assignedBy: session?.user?.id || null
+          }
+        })
+
+        // Update the legacy role field for backwards compatibility
+        await tx.user.update({
+          where: { id },
+          data: {
+            role: selectedRole.name.toLowerCase()
+          }
+        })
       }
+
+      // Update user basic information
+      const user = await tx.user.update({
+        where: { id },
+        data: {
+          ...(displayName !== undefined && { displayName }),
+          ...(firstName !== undefined && { firstName }),
+          ...(lastName !== undefined && { lastName }),
+          ...(email && { email }),
+          ...(isActive !== undefined && { isActive })
+        },
+        select: {
+          id: true,
+          displayName: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+          userRoles: {
+            include: {
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  permissions: true,
+                  isSystem: true
+                }
+              }
+            }
+          }
+        }
+      })
+
+      return user
     })
 
-    return res.status(200).json(user)
+    // Transform response to match expected format
+    const transformedUser = {
+      ...result,
+      name: result.displayName || `${result.firstName || ''} ${result.lastName || ''}`.trim(),
+      roles: result.userRoles.map(ur => ur.role),
+      permissions: result.userRoles.flatMap(ur => ur.role.permissions || [])
+    }
+
+    return res.status(200).json(transformedUser)
   } catch (error) {
     console.error('Error updating user:', error)
-    return res.status(500).json({ error: 'Failed to update user' })
+    return res.status(500).json({ error: error.message || 'Failed to update user' })
   }
 }
 

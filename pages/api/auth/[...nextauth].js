@@ -1,12 +1,22 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
 import bcrypt from 'bcryptjs'
 import prisma from '../../../lib/prisma'
 import ProductionLogger from '../../../lib/productionLogger'
 import { getUserPermissions } from '../../../lib/permissions'
+import { logSSOAttempt } from '../../../lib/sso/ssoAuditLog'
 
 export const authOptions = {
   providers: [
+    // Google OAuth Provider (SSO)
+    ...(process.env.GOOGLE_CLIENT_ID ? [GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      allowDangerousEmailAccountLinking: false,
+    })] : []),
+    
+    // Credentials Provider (Existing)
     CredentialsProvider({
       name: 'credentials',
       credentials: {
@@ -91,11 +101,93 @@ export const authOptions = {
     maxAge: 24 * 60 * 60, // 24 hours
   },
   callbacks: {
-    async jwt({ token, user }) {
+    // Custom signIn callback for SSO validation
+    async signIn({ user, account, profile, email, credentials }) {
+      // If using SSO provider (Google, Microsoft, etc.)
+      if (account?.provider && account.provider !== 'credentials') {
+        try {
+          const ssoEmail = profile?.email || email
+          
+          // Query database for user (simplified - no nested includes to avoid Prisma errors)
+          const dbUser = await prisma.user.findUnique({
+            where: { email: ssoEmail }
+          })
+          
+          // If user not found → DENY with clean error
+          if (!dbUser) {
+            try {
+              await logSSOAttempt(ssoEmail, account.provider, 'user_not_found', 'User does not exist in system', {
+                profile: { name: profile?.name, email: profile?.email }
+              })
+            } catch (logError) {
+              ProductionLogger.error('Failed to log SSO attempt:', logError.message)
+            }
+            // Return false to deny login - NextAuth will redirect to error page
+            return '/auth/signin?error=user_not_found'
+          }
+          
+          // If SSO disabled for user → DENY with clean error
+          if (!dbUser.isSSOEnabled) {
+            try {
+              await logSSOAttempt(ssoEmail, account.provider, 'sso_disabled', 'SSO not enabled for this user')
+            } catch (logError) {
+              ProductionLogger.error('Failed to log SSO attempt:', logError.message)
+            }
+            return '/auth/signin?error=sso_disabled'
+          }
+          
+          // Update user SSO info in DB
+          try {
+            await prisma.user.update({
+              where: { id: dbUser.id },
+              data: {
+                ssoProviderId: account.providerAccountId,
+                ssoProvider: account.provider,
+                ssoEmail: ssoEmail,
+                lastSSOLogin: new Date(),
+                lastLogin: new Date(),
+              }
+            })
+          } catch (updateError) {
+            ProductionLogger.error('Failed to update SSO info:', updateError.message)
+            // Continue anyway - login is allowed
+          }
+          
+          // Log success
+          try {
+            await logSSOAttempt(ssoEmail, account.provider, 'success')
+          } catch (logError) {
+            ProductionLogger.error('Failed to log SSO success:', logError.message)
+          }
+          
+          // ALLOW login
+          return true
+        } catch (error) {
+          // Strip ANSI codes from error message
+          const cleanMessage = error.message.replace(/\x1B\[[0-9;]*[mG]/g, '')
+          ProductionLogger.error('SSO signIn error:', cleanMessage)
+          
+          try {
+            await logSSOAttempt(profile?.email, account?.provider, 'error', cleanMessage)
+          } catch (logError) {
+            ProductionLogger.error('Failed to log SSO error:', logError.message)
+          }
+          
+          // Return error redirect instead of throwing
+          return '/auth/signin?error=callback'
+        }
+      }
+      
+      // Allow credentials provider to continue
+      return true
+    },
+
+    async jwt({ token, user, account }) {
       if (user) {
         token.role = user.role
         token.roles = user.roles
         token.permissions = user.permissions
+        token.ssoProvider = account?.provider || null
       }
       return token
     },
@@ -105,6 +197,7 @@ export const authOptions = {
         session.user.role = token.role
         session.user.roles = token.roles
         session.user.permissions = token.permissions
+        session.user.ssoProvider = token.ssoProvider
       }
       return session
     }

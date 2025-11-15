@@ -24,10 +24,17 @@ model User {
   passwordChangeRequired Boolean      @default(false)
   passwordResetToken     String?
   passwordResetExpiry    DateTime?
+  // SSO Fields
+  ssoProviderId          String?      // e.g., "google_123456789"
+  ssoProvider            String?      // "google" or "microsoft"
+  ssoEmail               String?      // email from SSO provider
+  lastSSOLogin           DateTime?    // track SSO login history
+  isSSOEnabled           Boolean      @default(false) // flag to allow SSO for user
   createdAgents          Agent[]      @relation("CreatedByUser")
   agent                  Agent?
   farmers                Farmer[]
   userRoles              user_roles[]
+  userPermissions        UserPermission[]
 
   @@map("users")
 }
@@ -132,7 +139,7 @@ model Farm {
   id                  String   @id @default(cuid())
   farmSize            Float?
   primaryCrop         String?
-  secondaryCrop       String?
+  secondaryCrop       String[]
   produceCategory     String?
   farmOwnership       String?
   farmState           String?
@@ -302,16 +309,18 @@ model Cluster {
 }
 
 model roles {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  description String?
-  permissions Json?
-  isSystem    Boolean      @default(false)
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @default(now()) @updatedAt
-  createdBy   String?
-  userRoles   user_roles[]
+  id              String          @id @default(cuid())
+  name            String          @unique
+  description     String?
+  permissions     Json?
+  isSystem        Boolean         @default(false)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @default(now()) @updatedAt
+  createdBy       String?
+  userRoles       user_roles[]
+  rolePermissions RolePermission[]
+  scopeConfigs    ScopeConfig[]
 
   @@map("roles")
 }
@@ -342,4 +351,87 @@ model Attendance {
   agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@map("attendance")
+}
+
+// SSO Models
+model SSOAuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  // null if user not found
+  email     String
+  provider  String   // "google" or "microsoft"
+  status    String   // "success" | "user_not_found" | "sso_disabled" | "error"
+  reason    String?  // why it failed
+  metadata  Json?    // raw SSO response (sanitized)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@map("sso_audit_logs")
+}
+
+model Permission {
+  id              String          @id @default(cuid())
+  name            String          @unique        // e.g. "farmers.read"
+  description     String?
+  category        String?                        // e.g., "farmers", "farms", "agents"
+  action          String?                        // e.g., "read", "write", "delete", "create"
+  isSystem        Boolean         @default(false)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+
+  @@unique([category, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  role         roles      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  permissionId String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+model ScopeConfig {
+  id         String   @id @default(cuid())
+  roleId     String
+  scope      String   // e.g. "global" | "cluster" | "state" | "lga"
+  scopeValue String?  // e.g. clusterId or state code
+  role       roles    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([roleId, scope, scopeValue])
+  @@map("scope_configs")
+}
+
+model PermissionAuditLog {
+  id           String   @id @default(cuid())
+  action       String   // grant | revoke
+  changedBy    String
+  userId       String?
+  roleId       String?
+  permissionId String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@map("permission_audit_logs")
 }

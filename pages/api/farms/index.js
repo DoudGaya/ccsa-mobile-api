@@ -124,8 +124,45 @@ export default async function handler(req, res) {
         quantity,
       } = req.body;
 
+      // Validate required fields
       if (!farmerId) {
         return res.status(400).json({ error: 'Farmer ID is required' });
+      }
+
+      if (!primaryCrop || primaryCrop.trim() === '') {
+        return res.status(400).json({ error: 'Primary crop is required' });
+      }
+
+      if (!farmOwnership || farmOwnership.trim() === '') {
+        return res.status(400).json({ error: 'Farm ownership is required' });
+      }
+
+      if (!farmState || farmState.trim() === '') {
+        return res.status(400).json({ error: 'Farm state is required' });
+      }
+
+      if (!farmLocalGovernment || farmLocalGovernment.trim() === '') {
+        return res.status(400).json({ error: 'Farm local government is required' });
+      }
+
+      if (!farmWard || farmWard.trim() === '') {
+        return res.status(400).json({ error: 'Farm ward is required' });
+      }
+
+      if (!farmPollingUnit || farmPollingUnit.trim() === '') {
+        return res.status(400).json({ error: 'Farm polling unit is required' });
+      }
+
+      if (!farmingSeason || farmingSeason.trim() === '') {
+        return res.status(400).json({ error: 'Farming season is required' });
+      }
+
+      // Validate farm polygon
+      if (!farmPolygon || !Array.isArray(farmPolygon) || farmPolygon.length < 3) {
+        return res.status(400).json({ 
+          error: 'Farm boundary polygon is required',
+          message: 'Please map the farm boundary with at least 3 GPS points'
+        });
       }
 
       // Convert string values to appropriate types
@@ -171,6 +208,29 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Farmer not found' });
       }
 
+      // Convert secondaryCrop from string to array if needed
+      // Mobile app sends: "Catfish, Carp, Mackerel" (string)
+      // Schema expects: ["Catfish", "Carp", "Mackerel"] (array)
+      let parsedSecondaryCrop = null;
+      if (secondaryCrop) {
+        if (Array.isArray(secondaryCrop)) {
+          // Already an array - use as is
+          parsedSecondaryCrop = secondaryCrop;
+        } else if (typeof secondaryCrop === 'string' && secondaryCrop.trim() !== '') {
+          // String format - split by comma and trim each item
+          parsedSecondaryCrop = secondaryCrop
+            .split(',')
+            .map(crop => crop.trim())
+            .filter(crop => crop.length > 0);
+        }
+      }
+
+      console.log('secondaryCrop conversion:', {
+        original: secondaryCrop,
+        converted: parsedSecondaryCrop,
+        type: Array.isArray(parsedSecondaryCrop) ? 'array' : typeof parsedSecondaryCrop
+      });
+
       // Prepare JSON fields - ensure they're properly formatted for PostgreSQL
       // Remove any undefined or circular references
       let preparedFarmPolygon = null;
@@ -207,7 +267,7 @@ export default async function handler(req, res) {
         farmingSeason: farmingSeason || null,
         farmWard: farmWard || null,
         farmPollingUnit: farmPollingUnit || null,
-        secondaryCrop: secondaryCrop || null,
+        secondaryCrop: parsedSecondaryCrop || null,  // ← CONVERTED: String to Array
         farmingExperience: parsedFarmingExperience,
         farmLatitude: parsedFarmLatitude,
         farmLongitude: parsedFarmLongitude,

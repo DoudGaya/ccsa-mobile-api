@@ -1,6 +1,8 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
+import logo from '../public/logo.png'
+import ccsalogo from '../public/ccsa-logo.png'
 import { useRouter } from 'next/router'
 import { useState, useEffect } from 'react'
 import { 
@@ -32,12 +34,12 @@ const navigation = [
   { name: 'Farms', href: '/farms', icon: GlobeAltIcon },
   // { name: 'Map View', href: '/map', icon: MapIcon },
   // { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
-  // { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
+  { name: 'Users', href: '/users', icon: DocumentTextIcon },
   { name: 'GIS (Google)', href: '/gis-map-google', icon: MapIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ]
 
-export default function Layout({ children, title = 'CCSA Dashboard' }) {
+export default function Layout({ children, title = 'CCSA FIMS' }) {
   const { data: session } = useSession()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -129,17 +131,16 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
               </button>
             </div>
             {/* Mobile navigation */}
-            <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-              <div className="flex-shrink-0 flex items-center px-4 mb-5">
-                <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center shadow-sm">
-                  <span className="text-white font-bold text-lg">C</span>
-                </div>
+            <div className="flex-1 h-0 pt-5 pb-4 p-3 overflow-y-auto">
+              <div className="flex-shrink-0 bg-gray-200 rounded-lg py-2 flex items-center mb-5">
+               
                 <div className="ml-3">
-                  <h1 className="text-xl font-bold text-green-700">CCSA</h1>
-                  <p className="text-xs text-gray-500 -mt-1">Farmer Registry</p>
+                  {/* <h1 className="text-xl font-bold text-green-700">CCSA</h1> */}
+                  <img src={ccsalogo.src} alt="CCSA Logo" className="h-12 w-auto" />
+                  {/* <p className="text-xs text-gray-500 -mt-1">Farmer Registry</p> */}
                 </div>
               </div>
-              <nav className="px-2 space-y-1">
+              <nav className=" space-y-1">
                 {navigation.map((item) => {
                   const isActive = router.pathname === item.href
                   return (
@@ -148,14 +149,14 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
                       href={item.href}
                       className={`${
                         isActive
-                          ? 'bg-green-100 text-green-900 border-r-2 border-green-600'
+                          ? 'bg-gray-100 text-blue-950 rounded-lg'
                           : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      } group flex items-center px-3 py-2.5 text-base font-medium rounded-lg transition-colors duration-200`}
+                      } group flex items-center px-3 py-3 text-base font-medium transition-colors duration-200`}
                       onClick={() => setSidebarOpen(false)}
                     >
                       <item.icon
                         className={`${
-                          isActive ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-500'
+                          isActive ? 'text-blue-950' : 'text-gray-400 group-hover:text-gray-500'
                         } mr-4 h-6 w-6 flex-shrink-0`}
                       />
                       {item.name}
@@ -165,16 +166,18 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
               </nav>
             </div>
             {/* Mobile user section */}
-            <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-              <div className="flex items-center w-full">
+            <div className="flex-shrink-0 flex p-4">
+              <div className="flex items-start w-full px-4 py-2 rounded-lg bg-gray-200">
                 <div className="flex-shrink-0">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-sm">
-                    <span className="text-sm font-bold text-white">
-                      {getUserInitials()}
+                  <div className="h-10 w-10 rounded-full flex items-center justify-center shadow-sm">
+                    <span className="text-sm font-bold text-blue-950">
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-8 stroke-blue-950">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
                     </span>
                   </div>
                 </div>
-                <div className="ml-3 flex-1">
+                <div className="ml-3 flex items-end justify-start flex-col flex-1">
                   <p className="text-base font-medium text-gray-700 truncate">
                     {getUserDisplayName()}
                   </p>
@@ -183,9 +186,9 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
                   </p>
                   <button
                     onClick={handleSignOut}
-                    className="text-sm text-gray-500 hover:text-gray-700 flex items-center mt-1 transition-colors duration-200"
+                    className="text-base bg-white px-4 mt-3 py-1 rounded-lg text-gray-700 hover:text-gray-700 flex items-center transition-colors duration-200"
                   >
-                    <ArrowLeftOnRectangleIcon className="h-4 w-4 mr-1" />
+                    <ArrowLeftOnRectangleIcon className="h-8 w-8 mr-1" />
                     Sign out
                   </button>
                 </div>
@@ -199,27 +202,26 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
       <div className={`hidden md:flex md:flex-shrink-0 transition-all duration-300 ${
         sidebarCollapsed ? 'md:w-20' : 'md:w-64'
       }`}>
-        <div className="flex flex-col w-full">
-          <div className="flex flex-col h-0 flex-1 bg-white border-r border-gray-200 shadow-sm">
+        <div className="flex flex-col p-2 w-full">
+          <div className="flex flex-col h-0 flex-1 bg-white rounded-lg border-r border-gray-200 p-2 shadow-sm">
             {/* Logo and collapse button */}
-            <div className="flex items-center justify-between flex-shrink-0 px-4 py-4 border-b border-gray-200">
+            <div className={`flex items-center justify-between ${sidebarCollapsed ? '' : ''} flex-shrink-0 p-1 rounded-lg bg-gray-200 border-gray-200`}>
               <div className="flex items-center">
                 {/* CCSA Logo */}
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center shadow-sm">
-                    <span className="text-white font-bold text-lg">C</span>
-                  </div>
+                  
                 </div>
                 {!sidebarCollapsed && (
                   <div className="ml-3">
-                    <h1 className="text-xl font-bold text-green-700">CCSA</h1>
-                    <p className="text-xs text-gray-500 -mt-1">Farmer Registry</p>
+                    {/* <h1 className="text-xl font-bold text-green-700">CCSA</h1> */}
+                    <img src={ccsalogo.src} alt="CCSA Logo" className="h-12 w-auto" />
+                    {/* <p className="text-xs text-gray-500 -mt-1">Farmer Registry</p> */}
                   </div>
                 )}
               </div>
               <button
                 onClick={handleSidebarToggle}
-                className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                className="p-2 rounded-lg text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-white transition-colors duration-200"
               >
                 {sidebarCollapsed ? (
                   <ChevronRightIcon className="h-5 w-5" />
@@ -230,7 +232,7 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
             </div>
 
             {/* Navigation */}
-            <nav className="mt-5 flex-1 px-2 space-y-1 overflow-y-auto">
+            <nav className="mt-5 flex-1  space-y-1 overflow-y-auto">
               {navigation.map((item) => {
                 const isActive = router.pathname === item.href
                 return (
@@ -239,16 +241,16 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
                     href={item.href}
                     className={`${
                       isActive
-                        ? 'bg-green-100 text-green-900 border-r-2 border-green-600'
+                        ? 'bg-blue-950/10 text-black rounded-lg'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    } group flex items-center px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                       sidebarCollapsed ? 'justify-center' : ''
                     }`}
                     title={sidebarCollapsed ? item.name : ''}
                   >
                     <item.icon
                       className={`${
-                        isActive ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-500'
+                        isActive ? 'text-black' : 'text-gray-400 group-hover:text-gray-500'
                       } flex-shrink-0 h-5 w-5 ${sidebarCollapsed ? '' : 'mr-3'}`}
                     />
                     {!sidebarCollapsed && (
@@ -260,18 +262,20 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
             </nav>
 
             {/* User section */}
-            <div className="flex-shrink-0 border-t border-gray-200">
-              <div className="p-4">
-                <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
+            <div className="flex-shrink-0">
+              <div className="">
+                <div className={`flex bg-gray-200 rounded-lg items-start justify-end ${sidebarCollapsed ? 'justify-center' : ' px-3 py-2'} mb-2 group relative`}>
                   <div className="flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-sm">
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br flex items-center justify- shadow-sm">
                       <span className="text-sm font-bold text-white">
-                        {getUserInitials()}
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className=" stroke-blue-950 size-10">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                        </svg>
                       </span>
                     </div>
                   </div>
                   {!sidebarCollapsed && (
-                    <div className="ml-3 flex-1 min-w-0">
+                    <div className="ml-3 justify-end items-end flex flex-col flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {getUserDisplayName()}
                       </p>
@@ -295,14 +299,15 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
                 </div>
               </div>
             </div>
+            
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex flex-col w-0 flex-1 overflow-hidden">
+      <div className="flex flex-col py-2 pr-3 w-0 flex-1 overflow-hidden">
         {/* Top navigation */}
-        <div className="relative z-10 flex-shrink-0 flex h-16 bg-white shadow-sm border-b border-gray-200">
+        <div className="relative z-10 bg-white rounded-lg flex-shrink-0 flex h-16 shadow-sm border-b border-gray-200">
           <button
             className="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500 md:hidden hover:bg-gray-50 transition-colors duration-200"
             onClick={() => setSidebarOpen(true)}
@@ -337,14 +342,14 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
               </div>
 
               {/* Time and date display */}
-              <div className="hidden lg:flex flex-col items-end text-right">
+              {/* <div className="hidden lg:flex flex-col items-end text-right">
                 <div className="text-sm font-medium text-gray-900">
                   {formatTime(currentTime)}
                 </div>
                 <div className="text-xs text-gray-500">
                   {formatDate(currentTime)}
                 </div>
-              </div>
+              </div> */}
 
               {/* Notifications */}
               {/* <button className="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors duration-200 relative">
@@ -371,9 +376,13 @@ export default function Layout({ children, title = 'CCSA Dashboard' }) {
                     {session?.user?.role || 'Administrator'}
                   </div>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-sm">
-                  <span className="text-xs font-bold text-white">
-                    {getUserInitials()}
+                <div className="h-8 w-8 rounded-full flex items-center justify-center shadow-sm">
+                  <span className="text-xs font-bold text-blue-950">
+                    {/* {getUserInitials()} */}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-8 ">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+
                   </span>
                 </div>
               </div>
