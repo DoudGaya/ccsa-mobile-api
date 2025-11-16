@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../auth/[...nextauth]'
-import ProductionLogger from '../../../../lib/productionLogger'
-import { getSSOAuditLogs } from '../../../../lib/sso/ssoAuditLog'
+import { authOptions } from '../auth/[...nextauth]'
+import ProductionLogger from '../../../lib/productionLogger'
+import { getSSOAuditLogs } from '../../../lib/sso/ssoAuditLog'
 
 /**
  * Get SSO audit logs (admin only)

@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../auth/[...nextauth]'
-import prisma from '../../../lib/prisma'
-import ProductionLogger from '../../../lib/productionLogger'
-import { enableSSO, disableSSO } from '../../../lib/sso/ssoAuditLog'
+import { authOptions } from '../../auth/[...nextauth]'
+import prisma from '../../../../lib/prisma'
+import ProductionLogger from '../../../../lib/productionLogger'
+import { enableSSO, disableSSO } from '../../../../lib/sso/ssoAuditLog'
 
 /**
  * Manage SSO access for users
