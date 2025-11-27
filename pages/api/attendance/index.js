@@ -86,19 +86,39 @@ async function createAttendanceRecord(req, res) {
     });
 
     if (!agent) {
-      // Create Agent record if it doesn't exist
-      agent = await prisma.agent.create({
-        data: {
-          userId: agentUserId,
-          nin: `temp_${Date.now()}`, // Temporary NIN, should be updated later
-          firstName: userRecord.firstName || 'Unknown',
-          lastName: userRecord.lastName || 'User',
-          phone: userRecord.phoneNumber || 'Unknown',
-          email: userRecord.email,
-          status: 'active'
-        },
-        select: { id: true, firstName: true, lastName: true }
+      // Check if an agent with this phone number already exists
+      const existingAgentByPhone = await prisma.agent.findUnique({
+        where: { phone: userRecord.phoneNumber || 'Unknown' },
+        select: { id: true, firstName: true, lastName: true, userId: true }
       });
+
+      if (existingAgentByPhone) {
+        // Use the existing agent record instead of creating a duplicate
+        console.log(`[ATTENDANCE] Found existing agent by phone: ${userRecord.phoneNumber}, linking to user ${agentUserId}`);
+        agent = existingAgentByPhone;
+        
+        // Optionally update the userId link if it's different
+        if (existingAgentByPhone.userId !== agentUserId) {
+          await prisma.agent.update({
+            where: { id: existingAgentByPhone.id },
+            data: { userId: agentUserId }
+          });
+        }
+      } else {
+        // Create Agent record if it doesn't exist
+        agent = await prisma.agent.create({
+          data: {
+            userId: agentUserId,
+            nin: `temp_${Date.now()}`, // Temporary NIN, should be updated later
+            firstName: userRecord.firstName || 'Unknown',
+            lastName: userRecord.lastName || 'User',
+            phone: userRecord.phoneNumber || `temp_phone_${Date.now()}`,
+            email: userRecord.email,
+            status: 'active'
+          },
+          select: { id: true, firstName: true, lastName: true }
+        });
+      }
     }
 
     // Create attendance record
