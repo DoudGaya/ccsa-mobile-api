@@ -74,6 +74,9 @@ async function getAgents(req, res) {
 
     ProductionLogger.debug('Query where clause:', where);
 
+    // Get total count first
+    const totalCount = await prisma.user.count({ where });
+
     // Fetch agents with related data
     const agents = await prisma.user.findMany({
       where,
@@ -99,7 +102,7 @@ async function getAgents(req, res) {
       skip: parseInt(offset)
     });
 
-    ProductionLogger.info(`Found ${agents.length} agents`);
+    ProductionLogger.info(`Found ${agents.length} agents out of ${totalCount} total`);
 
     // Transform the data to match expected format
     const transformedAgents = agents.map(agent => ({
@@ -127,12 +130,12 @@ async function getAgents(req, res) {
     return res.status(200).json({
       success: true,
       agents: transformedAgents,
-      total: agents.length,
+      total: totalCount,
       pagination: {
         limit: parseInt(limit),
         offset: parseInt(offset),
-        total: agents.length,
-        hasMore: parseInt(offset) + agents.length < agents.length
+        total: totalCount,
+        hasMore: parseInt(offset) + agents.length < totalCount
       }
     });
 

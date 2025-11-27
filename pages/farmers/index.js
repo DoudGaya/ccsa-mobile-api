@@ -478,45 +478,39 @@ export default function Farmers() {
         {/* Enhanced Summary Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Stats */}
-          <div className="lg:col-span-2 bg-white shadow rounded-lg p-6">
+          <div className="lg:col-span-3 bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Overview</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600">{analytics.overview.totalFarmers.toLocaleString()}</div>
-                <div className="text-sm text-gray-500">Total Farmers</div>
+              <div className="text-start p-3 rounded-md bg-stone-200 py-3">
+                <div className="text-3xl font-bold text-gray-900">{analytics.overview.totalFarmers.toLocaleString()}</div>
+                <div className="text-sm text-gray-500">Registered Farmers</div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600">{analytics.overview.totalHectares.toLocaleString()}</div>
+              <div className="text-start p-3 rounded-md bg-stone-200 py-3">
+                <div className="text-3xl font-bold text-gray-900">{analytics.overview.totalHectares.toLocaleString()}</div>
                 <div className="text-sm text-gray-500">Total Hectares</div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-purple-600">{analytics.overview.verificationRate}%</div>
-                <div className="text-sm text-gray-500">Verified</div>
+              <div className="text-start p-3 rounded-md bg-stone-200 py-3">
+                <div className="text-3xl font-bold text-gray-900">{analytics.overview.verificationRate}%</div>
+                <div className="text-sm text-gray-500">Verified Farmers</div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-orange-600">{analytics.overview.farmRegistrationRate}%</div>
-                <div className="text-sm text-gray-500">With Farms</div>
+              <div className="text-start p-3 rounded-md bg-stone-200 py-3">
+                <div className="text-3xl font-bold text-gray-900">{analytics.overview.farmRegistrationRate}%</div>
+                <div className="text-sm text-gray-500">Farms Captured</div>
               </div>
             </div>
           </div>
 
           {/* Top Crops */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Crops</h3>
-            <div className="space-y-3">
-              {analytics.topCrops.slice(0, 5).map((crop, index) => (
-                <div key={crop.crop} className="flex items-center justify-between">
+          <div className="bg-white col-span-3 shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Crops / Animals</h3>
+            <div className="grid gap-4 grid-cols-3">
+              {analytics.topCrops.slice(0, 12).map((crop, index) => (
+                <div key={crop.crop} className="flex flex-col bg-stone-300 p-2">
                   <div className="flex items-center">
-                    <div className={`w-3 h-3 rounded-full mr-3 ${
-                      index === 0 ? 'bg-green-500' :
-                      index === 1 ? 'bg-blue-500' :
-                      index === 2 ? 'bg-yellow-500' :
-                      index === 3 ? 'bg-purple-500' : 'bg-gray-500'
-                    }`}></div>
-                    <span className="text-sm font-medium text-gray-900">{crop.crop}</span>
+                    <div className="text-xl font-bold text-gray-900">{crop.count + ' '}</div>
+                    <span className="text-lg font-medium text-gray-900">{crop.crop} </span>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-gray-900">{crop.count}</div>
+                  <div className="">
                     <div className="text-xs text-gray-500">{crop.percentage}%</div>
                   </div>
                 </div>
@@ -574,7 +568,7 @@ export default function Farmers() {
         </div>
 
         {/* Current Page Summary */}
-        <div className="bg-white shadow rounded-lg p-6">
+        <div className=" shadow rounded-lg p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Current Page Summary</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <div className="text-center">
@@ -705,8 +699,8 @@ export default function Farmers() {
                     </td>
                     <td className="table-cell">{farmer.nin}</td>
                     <td className="table-cell">{farmer.phone || farmer.phoneNumber}</td>
-                    <td className="table-cell">{farmer.state}</td>
-                    <td className="table-cell">{farmer.lga || farmer.localGovernment}</td>
+                    <td className="table-cell uppercase">{farmer.state}</td>
+                    <td className="table-cell uppercase">{farmer.lga || farmer.localGovernment}</td>
                     <td className="table-cell">
                       {farmer.cluster ? (
                         <div>

@@ -31,6 +31,7 @@ export const nigerianBanks = [
   // Microfinance Banks
   { code: "090270", name: "AB Microfinance Bank" },
   { code: "090260", name: "Above Only MFB" },
+  { code: "090266", name: "Taj Bank" },
   { code: "090134", name: "Accion Microfinance Bank" },
   { code: "090160", name: "Addosser Microfinance Bank" },
   { code: "090292", name: "Aella Credit" },

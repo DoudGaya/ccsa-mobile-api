@@ -133,11 +133,8 @@ export default function Layout({ children, title = 'CCSA FIMS' }) {
             {/* Mobile navigation */}
             <div className="flex-1 h-0 pt-5 pb-4 p-3 overflow-y-auto">
               <div className="flex-shrink-0 bg-gray-200 rounded-lg py-2 flex items-center mb-5">
-               
                 <div className="ml-3">
-                  {/* <h1 className="text-xl font-bold text-green-700">CCSA</h1> */}
                   <img src={ccsalogo.src} alt="CCSA Logo" className="h-12 w-auto" />
-                  {/* <p className="text-xs text-gray-500 -mt-1">Farmer Registry</p> */}
                 </div>
               </div>
               <nav className=" space-y-1">
@@ -213,9 +210,7 @@ export default function Layout({ children, title = 'CCSA FIMS' }) {
                 </div>
                 {!sidebarCollapsed && (
                   <div className="ml-3">
-                    {/* <h1 className="text-xl font-bold text-green-700">CCSA</h1> */}
                     <img src={ccsalogo.src} alt="CCSA Logo" className="h-12 w-auto" />
-                    {/* <p className="text-xs text-gray-500 -mt-1">Farmer Registry</p> */}
                   </div>
                 )}
               </div>
@@ -393,7 +388,7 @@ export default function Layout({ children, title = 'CCSA FIMS' }) {
         {/* Page content */}
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
           <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+            <div className=" w-full mx-auto px-4 sm:px-6 md:px-8">
               {children}
             </div>
           </div>

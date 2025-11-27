@@ -381,7 +381,7 @@ export default function Clusters() {
                   <div className="flex items-center">
                     <BuildingOfficeIcon className="h-8 w-8 text-blue-600" />
                     <div className="ml-3">
-                      <h3 className="text-lg font-medium text-gray-900 truncate">
+                      <h3 className="text-lg font-medium text-gray-900">
                         {cluster.title}
                       </h3>
                       <p className="text-sm text-gray-500">
