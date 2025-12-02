@@ -162,6 +162,8 @@ model Farm {
   yieldSeason         String?
   crop                String?
   quantity            Float?
+  cropVariety         String?
+  landforms           String?
   farmerId            String
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -301,6 +303,9 @@ model Cluster {
   clusterLeadAccountName        String?
   clusterLeadAlternativePhone   String?
   clusterLeadWhatsAppNumber     String?
+  totalFarmers                  Int       @default(0)
+  totalFarms                    Int       @default(0)
+  totalFarmSize                 Float     @default(0)
   isActive                      Boolean   @default(true)
   createdAt                     DateTime  @default(now())
   updatedAt                     DateTime  @default(now()) @updatedAt
@@ -332,6 +337,7 @@ model user_roles {
   roleId     String
   assignedAt DateTime @default(now())
   assignedBy String?
+  createdAt  DateTime @default(now())
   role       roles    @relation(fields: [roleId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
