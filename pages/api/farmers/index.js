@@ -68,13 +68,37 @@ async function getFarmers(req, res) {
       search = '', 
       state = '', 
       cluster = '',
-      status // No default - mobile agents should see all their farmers regardless of status
+      status, // No default - mobile agents should see all their farmers regardless of status
+      startDate = '',
+      endDate = ''
     } = req.query;
 
-    ProductionLogger.debug('Farmers API query params', { page, limit, search, state, status });
+    ProductionLogger.debug('Farmers API query params', { page, limit, search, state, status, startDate, endDate });
     ProductionLogger.debug('User context', { isAdmin: req.isAdmin, userUid: req.user?.uid });
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Handle date filtering
+    let dateFilter = {};
+    if (startDate || endDate) {
+      const start = startDate ? new Date(startDate) : undefined;
+      let end = endDate ? new Date(endDate) : undefined;
+      
+      if (end) {
+        // Add 1 day to include the full end date
+        end.setDate(end.getDate() + 1);
+      }
+
+      dateFilter = {
+        createdAt: {
+          ...(start && { gte: start }),
+          ...(end && { lt: end })
+        }
+      };
+    }
+
+    // Handle search - ensure it's a string and not an array (in case of duplicate params)
+    const searchTerm = Array.isArray(search) ? search[0] : search;
 
     const whereClause = {
       // Only filter by agentId for mobile agents (agentId is the Firebase UID from User.id)
@@ -82,13 +106,23 @@ async function getFarmers(req, res) {
       ...(status && { status }), // Only filter by status if explicitly provided
       ...(state && { state }),
       ...(cluster && { clusterId: cluster }),
-      ...(search && {
+      ...dateFilter,
+      ...(searchTerm && {
         OR: [
-          { nin: { contains: search, mode: 'insensitive' } },
-          { firstName: { contains: search, mode: 'insensitive' } },
-          { lastName: { contains: search, mode: 'insensitive' } },
-          { phone: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
+          { nin: { contains: searchTerm, mode: 'insensitive' } },
+          { firstName: { contains: searchTerm, mode: 'insensitive' } },
+          { lastName: { contains: searchTerm, mode: 'insensitive' } },
+          { phone: { contains: searchTerm, mode: 'insensitive' } },
+          { email: { contains: searchTerm, mode: 'insensitive' } },
+          // Add support for full name search (basic implementation)
+          ...(searchTerm.includes(' ') ? [
+            {
+              AND: [
+                { firstName: { contains: searchTerm.split(' ')[0], mode: 'insensitive' } },
+                { lastName: { contains: searchTerm.split(' ')[1], mode: 'insensitive' } }
+              ]
+            }
+          ] : [])
         ],
       }),
     };
@@ -190,29 +224,45 @@ async function createFarmer(req, res) {
       return date;
     };
 
+    // Helper function to clean NIMC data (remove *** values)
+    const cleanNimcValue = (value) => {
+      if (!value) return null;
+      const cleaned = String(value).trim();
+      // Return null if value is ***, empty, or contains only special characters
+      if (!cleaned || cleaned === '***' || /^[*\s]+$/.test(cleaned)) {
+        return null;
+      }
+      return cleaned;
+    };
+
     // Flatten the nested structure for database storage
     const farmerData = {
       nin,
-      // Personal info from NIN
+      // Personal info from NIMC (name, DOB, gender, marital status, employment)
       firstName: personalInfo.firstName,
       middleName: personalInfo.middleName,
       lastName: personalInfo.lastName,
       dateOfBirth: parseDate(personalInfo.dateOfBirth),
       gender: personalInfo.gender,
-      state: personalInfo.state || contactInfo.state,
-      lga: personalInfo.lga || contactInfo.localGovernment,
       maritalStatus: personalInfo.maritalStatus,
       employmentStatus: personalInfo.employmentStatus,
       photoUrl: personalInfo.photoUrl || null, // Add photoUrl from NIN data
-      // Contact info (manual entry)
+      
+      // Location info - ALWAYS use contactInfo (form data) instead of NIMC data
+      // This prevents *** values from NIMC from being stored
+      state: contactInfo.state || cleanNimcValue(personalInfo.state),
+      lga: contactInfo.localGovernment || cleanNimcValue(personalInfo.lga),
+      ward: contactInfo.ward,
+      pollingUnit: contactInfo.pollingUnit || null,
+      
+      // Contact info (manual entry from form)
       phone: contactInfo.phoneNumber,
       email: contactInfo.email || null,
       whatsAppNumber: contactInfo.whatsAppNumber || null,
       address: contactInfo.address,
-      ward: contactInfo.ward,
-      pollingUnit: contactInfo.pollingUnit || null, // Add polling unit
       latitude: contactInfo.coordinates?.latitude,
       longitude: contactInfo.coordinates?.longitude,
+      
       // Bank info
       bankName: bankInfo.bankName,
       accountName: bankInfo.accountName,
@@ -225,6 +275,16 @@ async function createFarmer(req, res) {
       // Agent assignment
       agentId: req.user.uid,
     };
+    
+    ProductionLogger.debug('Farmer data prepared for creation', {
+      hasState: !!farmerData.state,
+      hasLga: !!farmerData.lga,
+      hasWard: !!farmerData.ward,
+      hasPollingUnit: !!farmerData.pollingUnit,
+      nimcState: personalInfo.state,
+      formState: contactInfo.state,
+      usedState: farmerData.state
+    });
 
     // Validate that cluster is provided
     if (!farmerData.clusterId) {

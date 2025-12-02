@@ -369,22 +369,24 @@ export default function Farms() {
           </div>
 
           {/* Top Primary Crops */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Primary Crops</h3>
-            <div className="space-y-3">
+          <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">Top Primary Crops</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
               {analytics.topPrimaryCrops.slice(0, 5).map((crop, index) => (
-                <div key={crop.crop} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className={`w-3 h-3 rounded-full mr-3 ${
+                <div key={crop.crop} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
                       index === 0 ? 'bg-green-500' :
                       index === 1 ? 'bg-blue-500' :
                       index === 2 ? 'bg-yellow-500' :
-                      index === 3 ? 'bg-purple-500' : 'bg-gray-500'
+                      index === 3 ? 'bg-purple-500' : 'bg-gray-400'
                     }`}></div>
                     <span className="text-sm font-medium text-gray-900">{crop.crop}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-gray-900">{crop.farmCount}</div>
+                    <div className="text-sm font-semibold text-gray-900">{crop.farmCount}</div>
                     <div className="text-xs text-gray-500">{crop.totalHectares}ha</div>
                   </div>
                 </div>
@@ -396,19 +398,19 @@ export default function Farms() {
         {/* Regional Distribution */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top States */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Top States by Farm Count</h3>
-            <div className="">
+          <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">Top States by Farm Count</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
               {analytics.topStates.slice(0, 10).map((state, index) => (
-                <div key={state.state} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-xs font-bold text-blue-600">{index + 1}</span>
-                    </div>
+                <div key={state.state} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-400 w-4">{index + 1}</span>
                     <span className="text-sm font-medium text-gray-900 capitalize">{state.state}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-gray-900">{state.farmCount.toLocaleString()}</div>
+                    <div className="text-sm font-semibold text-gray-900">{state.farmCount.toLocaleString()}</div>
                     <div className="text-xs text-gray-500">{state.totalHectares}ha ({state.percentage}%)</div>
                   </div>
                 </div>
@@ -417,22 +419,22 @@ export default function Farms() {
           </div>
 
           {/* Top LGAs */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Local Governments</h3>
-            <div className="">
+          <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">Top Local Governments</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
               {analytics.topLGAs.slice(0, 10).map((lga, index) => (
-                <div key={`${lga.lga}-${lga.state}`} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-xs font-bold text-green-600">{index + 1}</span>
-                    </div>
+                <div key={`${lga.lga}-${lga.state}`} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-400 w-4">{index + 1}</span>
                     <div>
                       <div className="text-sm font-medium text-gray-900 capitalize">{lga.lga}</div>
                       <div className="text-xs text-gray-500 capitalize">{lga.state} State</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-gray-900">{lga.farmCount.toLocaleString()}</div>
+                    <div className="text-sm font-semibold text-gray-900">{lga.farmCount.toLocaleString()}</div>
                     <div className="text-xs text-gray-500">{lga.totalHectares}ha</div>
                   </div>
                 </div>

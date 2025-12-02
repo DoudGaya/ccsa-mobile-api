@@ -278,6 +278,7 @@ model PollingUnit {
 model Cluster {
   id                            String    @id @default(cuid())
   title                         String    @unique
+  subCluster                    String?
   description                   String?
   clusterLeadFirstName          String
   clusterLeadLastName           String

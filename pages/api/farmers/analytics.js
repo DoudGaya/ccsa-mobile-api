@@ -16,7 +16,7 @@ async function handler(req, res) {
       const totalFarmers = await prisma.farmer.count();
 
       // Get farmers by state
-      const farmersByState = await prisma.farmer.groupBy({
+      const farmersByStateRaw = await prisma.farmer.groupBy({
         by: ['state'],
         _count: {
           id: true
@@ -25,9 +25,28 @@ async function handler(req, res) {
           _count: {
             id: 'desc'
           }
-        },
-        take: 10
+        }
       });
+
+      // Process and normalize state data
+      const stateMap = new Map();
+      
+      farmersByStateRaw.forEach(item => {
+        if (!item.state || item.state.trim() === '') return;
+        
+        const normalizedState = item.state.trim().toUpperCase();
+        const currentCount = stateMap.get(normalizedState) || 0;
+        stateMap.set(normalizedState, currentCount + item._count.id);
+      });
+      
+      // Convert back to array and sort
+      const farmersByState = Array.from(stateMap.entries())
+        .map(([state, count]) => ({
+          state: state.charAt(0) + state.slice(1).toLowerCase(), // Title Case for display
+          _count: { id: count }
+        }))
+        .sort((a, b) => b._count.id - a._count.id)
+        .slice(0, 10);
 
       // Get farmers by LGA for top states
       const farmersByLGA = await prisma.farmer.groupBy({

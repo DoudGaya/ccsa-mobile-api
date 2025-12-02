@@ -27,7 +27,9 @@ export default function Farmers() {
     state: '',
     gender: '',
     status: 'all',
-    cluster: ''
+    cluster: '',
+    startDate: '',
+    endDate: ''
   })
   const [pagination, setPagination] = useState({
     page: 1,
@@ -176,9 +178,12 @@ export default function Farmers() {
       if (filters.cluster) {
         params.append('cluster', filters.cluster)
       }
-      
-      if (searchTerm) params.append('search', searchTerm)
-      if (filters.state) params.append('state', filters.state)
+      if (filters.startDate) {
+        params.append('startDate', filters.startDate)
+      }
+      if (filters.endDate) {
+        params.append('endDate', filters.endDate)
+      }
       
       // Use the real API first
       const response = await fetch(`/api/farmers?${params.toString()}`)
@@ -501,18 +506,18 @@ export default function Farmers() {
           </div>
 
           {/* Top Crops */}
-          <div className="bg-white col-span-3 shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Crops / Animals</h3>
-            <div className="grid gap-4 grid-cols-3">
+          <div className="lg:col-span-3 bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">Top Crops / Animals</h3>
+            </div>
+            <div className="p-6 grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
               {analytics.topCrops.slice(0, 12).map((crop, index) => (
-                <div key={crop.crop} className="flex flex-col bg-stone-300 p-2">
-                  <div className="flex items-center">
-                    <div className="text-xl font-bold text-gray-900">{crop.count + ' '}</div>
-                    <span className="text-lg font-medium text-gray-900">{crop.crop} </span>
+                <div key={crop.crop} className="flex flex-col p-4 rounded-lg bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <span className="text-2xl font-bold text-gray-900">{crop.count}</span>
+                    <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{crop.percentage}%</span>
                   </div>
-                  <div className="">
-                    <div className="text-xs text-gray-500">{crop.percentage}%</div>
-                  </div>
+                  <span className="text-sm font-medium text-gray-600 truncate" title={crop.crop}>{crop.crop}</span>
                 </div>
               ))}
             </div>
@@ -522,19 +527,19 @@ export default function Farmers() {
         {/* Regional Distribution */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top States */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Top States</h3>
-            <div className="space-y-3">
+          <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">Top States</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
               {analytics.topStates.slice(0, 10).map((state, index) => (
-                <div key={state.state} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-xs font-bold text-blue-600">{index + 1}</span>
-                    </div>
+                <div key={state.state} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-400 w-4">{index + 1}</span>
                     <span className="text-sm font-medium text-gray-900 capitalize">{state.state}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-gray-900">{state.count.toLocaleString()}</div>
+                    <div className="text-sm font-semibold text-gray-900">{state.count.toLocaleString()}</div>
                     <div className="text-xs text-gray-500">{state.percentage}%</div>
                   </div>
                 </div>
@@ -543,22 +548,22 @@ export default function Farmers() {
           </div>
 
           {/* Top LGAs */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Local Governments</h3>
-            <div className="space-y-3">
+          <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">Top Local Governments</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
               {analytics.topLGAs.slice(0, 10).map((lga, index) => (
-                <div key={`${lga.lga}-${lga.state}`} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-xs font-bold text-green-600">{index + 1}</span>
-                    </div>
+                <div key={`${lga.lga}-${lga.state}`} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-400 w-4">{index + 1}</span>
                     <div>
                       <div className="text-sm font-medium text-gray-900 capitalize">{lga.lga}</div>
                       <div className="text-xs text-gray-500 capitalize">{lga.state} State</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-gray-900">{lga.count.toLocaleString()}</div>
+                    <div className="text-sm font-semibold text-gray-900">{lga.count.toLocaleString()}</div>
                     <div className="text-xs text-gray-500">{lga.percentage}%</div>
                   </div>
                 </div>
@@ -668,6 +673,33 @@ export default function Farmers() {
                 </option>
               ))}
             </select>
+
+            {/* Date Filters */}
+            <div className="flex space-x-2 items-center">
+              <div className="flex-1">
+                <label htmlFor="startDate" className="sr-only">Start Date</label>
+                <input
+                  type="date"
+                  id="startDate"
+                  className="block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Start Date"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                />
+              </div>
+              <span className="text-gray-500">-</span>
+              <div className="flex-1">
+                <label htmlFor="endDate" className="sr-only">End Date</label>
+                <input
+                  type="date"
+                  id="endDate"
+                  className="block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="End Date"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
