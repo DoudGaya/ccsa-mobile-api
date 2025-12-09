@@ -2,7 +2,7 @@ import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import bcrypt from 'bcryptjs'
-import prisma from '../../../lib/prisma'
+import prisma, { withRetry } from '../../../lib/prisma'
 import ProductionLogger from '../../../lib/productionLogger'
 import { getUserPermissions } from '../../../lib/permissions'
 import { logSSOAttempt } from '../../../lib/sso/ssoAuditLog'
@@ -42,25 +42,27 @@ export const authOptions = {
 
         try {
           // Find user in database with roles and permissions
-          const user = await prisma.user.findUnique({
-            where: {
-              email: credentials.email
-            },
-            include: {
-              userRoles: {
-                include: {
-                  role: {
-                    select: {
-                      id: true,
-                      name: true,
-                      permissions: true,
-                      isSystem: true
+          const user = await withRetry(async () => {
+            return await prisma.user.findUnique({
+              where: {
+                email: credentials.email
+              },
+              include: {
+                userRoles: {
+                  include: {
+                    role: {
+                      select: {
+                        id: true,
+                        name: true,
+                        permissions: true,
+                        isSystem: true
+                      }
                     }
                   }
                 }
               }
-            }
-          })
+            });
+          });
 
           if (!user || !user.password) {
             return null

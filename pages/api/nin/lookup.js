@@ -32,9 +32,18 @@ async function lookupNINFromAPI(nin) {
     if (data.status === 200 && data.data) {
       return data.data;
     } else {
+      // Handle specific "norecord" case
+      if (data.message === 'norecord' || data.status === 404) {
+        const error = new Error('NIN not found');
+        error.code = 'NIN_NOT_FOUND';
+        throw error;
+      }
       throw new Error(data.message || 'NIN not found or invalid');
     }
   } catch (error) {
+    // Pass through specific errors
+    if (error.code === 'NIN_NOT_FOUND') throw error;
+    
     ProductionLogger.error('NIN API lookup error:', error.message);
     throw error;
   }
@@ -72,6 +81,14 @@ export default authMiddleware(async function handler(req, res) {
       try {
         ninData = await lookupNINFromAPI(nin);
       } catch (error) {
+        if (error.code === 'NIN_NOT_FOUND') {
+          return res.status(404).json({
+            error: 'NIN not found',
+            status: 404,
+            message: 'The provided NIN does not exist in the database'
+          });
+        }
+
         ProductionLogger.error('External NIN API failed:', error.message);
         
         return res.status(503).json({ 

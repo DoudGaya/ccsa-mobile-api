@@ -289,8 +289,16 @@ export default async function handler(req, res) {
 
       // Try to create farm with retry logic
       const farm = await withRetry(async () => {
+        // Remove farmerId from data and use connect instead to avoid Prisma validation errors
+        const { farmerId: _fid, ...farmDataWithoutId } = farmData;
+        
         return await prisma.farm.create({
-          data: farmData,
+          data: {
+            ...farmDataWithoutId,
+            farmer: {
+              connect: { id: farmerId }
+            }
+          },
           include: {
             farmer: {
               select: {

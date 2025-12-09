@@ -177,7 +177,7 @@ async function getFarmers(req, res) {
     ProductionLogger.error('Error fetching farmers:', error);
     
     // Return graceful error response with suggestions
-    if (error.code === 'P1001') {
+    if (error.code === 'P1001' || error.code === 'P1017') {
       return res.status(503).json({ 
         error: 'Database connection temporarily unavailable. Please try again in a few moments.',
         message: 'The database server is unreachable. This is usually a temporary issue.',
