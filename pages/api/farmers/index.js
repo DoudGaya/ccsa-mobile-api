@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { asyncHandler, corsMiddleware } from '../../../lib/errorHandler';
 import ProductionLogger from '../../../lib/productionLogger';
+import { getUserPermissions, hasPermission } from '../../../lib/permissions';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -27,7 +28,8 @@ export default async function handler(req, res) {
       req.user = { 
         uid: session.user.id, 
         email: session.user.email,
-        role: session.user.role 
+        role: session.user.role,
+        permissions: session.user.permissions || []
       };
     } else {
       // Mobile agent request - apply Firebase authentication middleware
@@ -45,8 +47,16 @@ export default async function handler(req, res) {
 
     switch (method) {
       case 'GET':
+        // Check farmers.read permission
+        if (req.isAdmin && !hasPermission(req.user.permissions, 'farmers.read')) {
+          return res.status(403).json({ error: 'Insufficient permissions to view farmers' });
+        }
         return await getFarmers(req, res);
       case 'POST':
+        // Check farmers.create permission
+        if (req.isAdmin && !hasPermission(req.user.permissions, 'farmers.create')) {
+          return res.status(403).json({ error: 'Insufficient permissions to create farmers' });
+        }
         return await createFarmer(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
@@ -66,7 +76,7 @@ async function getFarmers(req, res) {
   try {
     const { 
       page = 1, 
-      limit = 10, 
+      limit = 50, // Increased default for better mobile experience
       search = '', 
       state = '', 
       cluster = '',
@@ -75,8 +85,8 @@ async function getFarmers(req, res) {
       endDate = ''
     } = req.query;
 
-    // Cap the limit to prevent massive responses (max 100)
-    const safeLimit = Math.min(parseInt(limit) || 10, 100);
+    // Cap the limit to prevent massive responses (max 200 for infinite scroll)
+    const safeLimit = Math.min(parseInt(limit) || 50, 200);
 
     ProductionLogger.debug('Farmers API query params', { page, limit: safeLimit, search, state, status, startDate, endDate });
     ProductionLogger.debug('User context', { isAdmin: req.isAdmin, userUid: req.user?.uid });
@@ -147,13 +157,27 @@ async function getFarmers(req, res) {
             lastName: true,
             email: true,
             phone: true,
-            phoneNumber: true,
+            whatsAppNumber: true,
             nin: true,
             state: true,
             lga: true,
-            localGovernment: true,
+            ward: true,
+            address: true,
+            pollingUnit: true,
+            dateOfBirth: true,
+            gender: true,
+            maritalStatus: true,
+            employmentStatus: true,
             status: true,
             createdAt: true,
+            photoUrl: true,
+            bankName: true,
+            accountName: true,
+            accountNumber: true,
+            bvn: true,
+            latitude: true,
+            longitude: true,
+            clusterId: true,
             cluster: {
               select: {
                 id: true,
@@ -194,6 +218,8 @@ async function getFarmers(req, res) {
         limit: safeLimit,
         total,
         pages: Math.ceil(total / safeLimit),
+        hasMore: offset + farmers.length < total, // For infinite scroll
+        currentCount: farmers.length,
       },
     });
   } catch (error) {

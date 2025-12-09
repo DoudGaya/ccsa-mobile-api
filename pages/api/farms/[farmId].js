@@ -3,6 +3,8 @@ import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { auth } from '../../../lib/firebase-admin';
 import ProductionLogger from '../../../lib/productionLogger';
+import { hasPermission } from '../../../lib/permissions';
+import { authOptions } from '../auth/[...nextauth]';
 
 // Helper function for Firebase authentication that doesn't send responses
 async function validateFirebaseAuth(req) {
@@ -44,7 +46,7 @@ export default async function handler(req, res) {
 
   try {
     // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)  
-    const session = await getServerSession(req, res);
+    const session = await getServerSession(req, res, authOptions);
     
     ProductionLogger.debug('Farm API - Session check', { 
       hasSession: !!session, 
@@ -59,7 +61,8 @@ export default async function handler(req, res) {
       req.user = { 
         uid: session.user.id, 
         email: session.user.email,
-        role: session.user.role 
+        role: session.user.role,
+        permissions: session.user.permissions || []
       };
       ProductionLogger.debug('Farm API - Using NextAuth session', { email: session.user.email });
     } else {
@@ -81,6 +84,11 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'GET') {
+      // Check farms.read permission for web admin users
+      if (req.isAdmin && !hasPermission(req.user.permissions, 'farms.read')) {
+        return res.status(403).json({ error: 'Insufficient permissions to view farm details' });
+      }
+      
       // Get a specific farm
       const farm = await prisma.farm.findUnique({
         where: { id: farmId },
@@ -104,6 +112,11 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
+      // Check farms.update permission for web admin users
+      if (req.isAdmin && !hasPermission(req.user.permissions, 'farms.update')) {
+        return res.status(403).json({ error: 'Insufficient permissions to update farms' });
+      }
+      
       // Update a farm
       const updateData = { ...req.body };
       

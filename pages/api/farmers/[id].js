@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
 import { authMiddleware } from '../../../lib/authMiddleware';
 import ProductionLogger from '../../../lib/productionLogger';
+import { hasPermission } from '../../../lib/permissions';
 
 // GET /api/farmers/[id] - Get farmer by ID
 // PUT /api/farmers/[id] - Update farmer
@@ -29,7 +30,8 @@ export default async function handler(req, res) {
       req.user = { 
         uid: session.user.id, 
         email: session.user.email,
-        role: session.user.role 
+        role: session.user.role,
+        permissions: session.user.permissions || []
       };
     } else {
       // Mobile agent request - apply Firebase authentication middleware
@@ -49,10 +51,19 @@ export default async function handler(req, res) {
 
     switch (method) {
       case 'GET':
+        if (req.isAdmin && !hasPermission(req.user.permissions, 'farmers.read')) {
+          return res.status(403).json({ error: 'Insufficient permissions to view farmer details' });
+        }
         return await getFarmer(req, res, id);
       case 'PUT':
+        if (req.isAdmin && !hasPermission(req.user.permissions, 'farmers.update')) {
+          return res.status(403).json({ error: 'Insufficient permissions to update farmers' });
+        }
         return await updateFarmer(req, res, id);
       case 'DELETE':
+        if (req.isAdmin && !hasPermission(req.user.permissions, 'farmers.delete')) {
+          return res.status(403).json({ error: 'Insufficient permissions to delete farmers' });
+        }
         return await deleteFarmer(req, res, id);
       default:
         res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);

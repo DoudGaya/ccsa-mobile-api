@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
 import Link from 'next/link'
+import { usePermissions, PermissionGate, PERMISSIONS } from '../components/PermissionProvider'
 import hierarchicalData from '../data/hierarchical-data'
 import {
   MapIcon,
@@ -20,6 +21,7 @@ import {
 export default function Farms() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { hasPermission } = usePermissions()
   const [farms, setFarms] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -549,13 +551,15 @@ export default function Farms() {
               >
                 Clear Filters
               </button>
-              <button
-                onClick={exportToExcel}
-                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 inline-flex items-center justify-center"
-              >
-                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                Export
-              </button>
+              <PermissionGate permission={PERMISSIONS.FARMS_EXPORT}>
+                <button
+                  onClick={exportToExcel}
+                  className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 inline-flex items-center justify-center"
+                >
+                  <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                  Export
+                </button>
+              </PermissionGate>
             </div>
           </div>
         </div>
@@ -673,21 +677,28 @@ export default function Farms() {
                               <Link
                                 href={`/farms/${farm.id}`}
                                 className="text-green-600 hover:text-green-900"
+                                title="View Details"
                               >
                                 <EyeIcon className="h-5 w-5" />
                               </Link>
-                              <Link
-                                href={`/farms/${farm.id}/edit`}
-                                className="text-blue-600 hover:text-blue-900"
-                              >
-                                <PencilIcon className="h-5 w-5" />
-                              </Link>
-                              <button
-                                onClick={() => handleDeleteFarm(farm.id)}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                <TrashIcon className="h-5 w-5" />
-                              </button>
+                              <PermissionGate permission={PERMISSIONS.FARMS_UPDATE}>
+                                <Link
+                                  href={`/farms/${farm.id}/edit`}
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Edit Farm"
+                                >
+                                  <PencilIcon className="h-5 w-5" />
+                                </Link>
+                              </PermissionGate>
+                              <PermissionGate permission={PERMISSIONS.FARMS_DELETE}>
+                                <button
+                                  onClick={() => handleDeleteFarm(farm.id)}
+                                  className="text-red-600 hover:text-red-900"
+                                  title="Delete Farm"
+                                >
+                                  <TrashIcon className="h-5 w-5" />
+                                </button>
+                              </PermissionGate>
                             </div>
                           </td>
                         </tr>

@@ -132,6 +132,11 @@ model Farmer {
   farms            Farm[]
   referees         Referee[]
 
+  @@index([agentId, createdAt(sort: Desc)]) // Optimize agent queries with date sorting
+  @@index([status, createdAt(sort: Desc)]) // Optimize status filtering
+  @@index([state, lga]) // Optimize location filtering
+  @@index([clusterId]) // Optimize cluster filtering
+  @@index([createdAt(sort: Desc)]) // Optimize general listing
   @@map("farmers")
 }
 

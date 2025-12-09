@@ -16,28 +16,51 @@ import {
 } from '@heroicons/react/24/outline'
 
 // Permission categories for the permissions tab
-const PERMISSION_CATEGORIES = [
-  { id: 'users.create', name: 'Create Users', category: 'Users' },
-  { id: 'users.read', name: 'View Users', category: 'Users' },
-  { id: 'users.update', name: 'Update Users', category: 'Users' },
-  { id: 'users.delete', name: 'Delete Users', category: 'Users' },
-  { id: 'agents.create', name: 'Create Agents', category: 'Agents' },
-  { id: 'agents.read', name: 'View Agents', category: 'Agents' },
-  { id: 'agents.update', name: 'Update Agents', category: 'Agents' },
-  { id: 'agents.delete', name: 'Delete Agents', category: 'Agents' },
-  { id: 'farmers.create', name: 'Create Farmers', category: 'Farmers' },
-  { id: 'farmers.read', name: 'View Farmers', category: 'Farmers' },
-  { id: 'farmers.update', name: 'Update Farmers', category: 'Farmers' },
-  { id: 'farmers.delete', name: 'Delete Farmers', category: 'Farmers' },
-  { id: 'clusters.create', name: 'Create Clusters', category: 'Clusters' },
-  { id: 'clusters.read', name: 'View Clusters', category: 'Clusters' },
-  { id: 'clusters.update', name: 'Update Clusters', category: 'Clusters' },
-  { id: 'clusters.delete', name: 'Delete Clusters', category: 'Clusters' },
-  { id: 'analytics.read', name: 'View Analytics', category: 'Analytics' },
-  { id: 'settings.update', name: 'Update Settings', category: 'Settings' },
-]
-
-export default function Users() {
+  const PERMISSION_CATEGORIES = [
+    { id: 'users.create', name: 'Create Users', category: 'Users' },
+    { id: 'users.read', name: 'View Users', category: 'Users' },
+    { id: 'users.update', name: 'Update Users', category: 'Users' },
+    { id: 'users.delete', name: 'Delete Users', category: 'Users' },
+    { id: 'agents.create', name: 'Create Agents', category: 'Agents' },
+    { id: 'agents.read', name: 'View Agents', category: 'Agents' },
+    { id: 'agents.update', name: 'Update Agents', category: 'Agents' },
+    { id: 'agents.delete', name: 'Delete Agents', category: 'Agents' },
+    { id: 'farmers.create', name: 'Create Farmers', category: 'Farmers' },
+    { id: 'farmers.read', name: 'View Farmers', category: 'Farmers' },
+    { id: 'farmers.update', name: 'Update Farmers', category: 'Farmers' },
+    { id: 'farmers.delete', name: 'Delete Farmers', category: 'Farmers' },
+    { id: 'farms.create', name: 'Create Farms', category: 'Farms' },
+    { id: 'farms.read', name: 'View Farms', category: 'Farms' },
+    { id: 'farms.update', name: 'Update Farms', category: 'Farms' },
+    { id: 'farms.delete', name: 'Delete Farms', category: 'Farms' },
+    { id: 'farms.export', name: 'Export Farms Data', category: 'Farms' },
+    { id: 'farms.import', name: 'Import Farms Data', category: 'Farms' },
+    { id: 'gis.view', name: 'View GIS Maps', category: 'GIS & Mapping' },
+    { id: 'gis.edit', name: 'Edit GIS Data', category: 'GIS & Mapping' },
+    { id: 'gis.export', name: 'Export GIS Data', category: 'GIS & Mapping' },
+    { id: 'gis.analyze', name: 'GIS Analytics', category: 'GIS & Mapping' },
+    { id: 'clusters.create', name: 'Create Clusters', category: 'Clusters' },
+    { id: 'clusters.read', name: 'View Clusters', category: 'Clusters' },
+    { id: 'clusters.update', name: 'Update Clusters', category: 'Clusters' },
+    { id: 'clusters.delete', name: 'Delete Clusters', category: 'Clusters' },
+    { id: 'certificates.create', name: 'Issue Certificates', category: 'Certificates' },
+    { id: 'certificates.read', name: 'View Certificates', category: 'Certificates' },
+    { id: 'certificates.update', name: 'Update Certificates', category: 'Certificates' },
+    { id: 'certificates.delete', name: 'Revoke Certificates', category: 'Certificates' },
+    { id: 'roles.create', name: 'Create Roles', category: 'Roles' },
+    { id: 'roles.read', name: 'View Roles', category: 'Roles' },
+    { id: 'roles.update', name: 'Update Roles', category: 'Roles' },
+    { id: 'roles.delete', name: 'Delete Roles', category: 'Roles' },
+    { id: 'analytics.read', name: 'View Analytics', category: 'Analytics' },
+    { id: 'settings.read', name: 'View Settings', category: 'Settings' },
+    { id: 'settings.update', name: 'Update Settings', category: 'Settings' },
+    { id: 'system.manage_permissions', name: 'Manage Permissions', category: 'System Administration', requiresSuperAdmin: true },
+    { id: 'system.manage_roles', name: 'Manage System Roles', category: 'System Administration', requiresSuperAdmin: true },
+    { id: 'system.view_logs', name: 'View System Logs', category: 'System Administration', requiresSuperAdmin: true },
+    { id: 'system.manage_backups', name: 'Manage Backups', category: 'System Administration', requiresSuperAdmin: true },
+    { id: 'system.manage_integrations', name: 'Manage Integrations', category: 'System Administration', requiresSuperAdmin: true },
+  ]
+  export default function Users() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('users')
@@ -863,14 +886,29 @@ export default function Users() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
                     <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-3">
                       {Object.entries(
-                        PERMISSION_CATEGORIES.reduce((acc, perm) => {
-                          if (!acc[perm.category]) acc[perm.category] = []
-                          acc[perm.category].push(perm)
-                          return acc
-                        }, {})
+                        PERMISSION_CATEGORIES
+                          .filter(perm => {
+                            // Only show system permissions to super admins
+                            if (perm.requiresSuperAdmin) {
+                              return hasPermission('system.manage_permissions');
+                            }
+                            return true;
+                          })
+                          .reduce((acc, perm) => {
+                            if (!acc[perm.category]) acc[perm.category] = []
+                            acc[perm.category].push(perm)
+                            return acc
+                          }, {})
                       ).map(([category, permissions]) => (
                         <div key={category} className="mb-4">
-                          <h4 className="font-medium text-gray-900 mb-2">{category}</h4>
+                          <h4 className="font-medium text-gray-900 mb-2">
+                            {category}
+                            {category === 'System Administration' && (
+                              <span className="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                Super Admin Only
+                              </span>
+                            )}
+                          </h4>
                           <div className="space-y-2">
                             {permissions.map((permission) => (
                               <div key={permission.id} className="flex items-center">
@@ -892,7 +930,12 @@ export default function Users() {
                                   }}
                                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                 />
-                                <label className="ml-2 block text-sm text-gray-900">{permission.name}</label>
+                                <label className="ml-2 block text-sm text-gray-900">
+                                  {permission.name}
+                                  {permission.requiresSuperAdmin && (
+                                    <span className="ml-1 text-xs text-red-600">(Super Admin)</span>
+                                  )}
+                                </label>
                               </div>
                             ))}
                           </div>

@@ -3,6 +3,7 @@ import prisma, { withRetry } from '../../../lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { updateFarmerStatusByFarms } from '../../../lib/farmerStatusUtils';
+import { hasPermission } from '../../../lib/permissions';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -25,7 +26,8 @@ export default async function handler(req, res) {
       req.user = { 
         uid: session.user.id, 
         email: session.user.email,
-        role: session.user.role 
+        role: session.user.role,
+        permissions: session.user.permissions || []
       };
     } else {
       // Mobile agent request - apply Firebase authentication middleware
@@ -34,6 +36,11 @@ export default async function handler(req, res) {
     }
     
     if (req.method === 'GET') {
+      // Check farms.read permission for web admin users
+      if (req.isAdmin && !hasPermission(req.user.permissions, 'farms.read')) {
+        return res.status(403).json({ error: 'Insufficient permissions to view farms' });
+      }
+      
       // Get all farms or farms by farmer ID
       const { farmerId, page = 1, limit = 50 } = req.query;
       
@@ -87,6 +94,11 @@ export default async function handler(req, res) {
     }
     
     if (req.method === 'POST') {
+      // Check farms.create permission for web admin users
+      if (req.isAdmin && !hasPermission(req.user.permissions, 'farms.create')) {
+        return res.status(403).json({ error: 'Insufficient permissions to create farms' });
+      }
+      
       // Create a new farm
       console.log('Creating new farm - received data:', JSON.stringify(req.body, null, 2));
       

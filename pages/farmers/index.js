@@ -599,13 +599,15 @@ export default function Farmers() {
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-gray-900">Search & Filters</h3>
-            <button
-              onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 inline-flex items-center"
-            >
-              <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-              Export to Excel
-            </button>
+            <PermissionGate permission={PERMISSIONS.FARMERS_EXPORT}>
+              <button
+                onClick={exportToExcel}
+                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 inline-flex items-center"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                Export to Excel
+              </button>
+            </PermissionGate>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Search */}

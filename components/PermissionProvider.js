@@ -1,69 +1,150 @@
 import { useSession } from 'next-auth/react'
 import { useState, useEffect, createContext, useContext } from 'react'
 
-// Permission constants
+// Permission constants - Single source of truth
 export const PERMISSIONS = {
+  // Users
   USERS_CREATE: 'users.create',
   USERS_READ: 'users.read',
   USERS_UPDATE: 'users.update',
   USERS_DELETE: 'users.delete',
+  // Agents
   AGENTS_CREATE: 'agents.create',
   AGENTS_READ: 'agents.read',
   AGENTS_UPDATE: 'agents.update',
   AGENTS_DELETE: 'agents.delete',
+  // Farmers
   FARMERS_CREATE: 'farmers.create',
   FARMERS_READ: 'farmers.read',
   FARMERS_UPDATE: 'farmers.update',
   FARMERS_DELETE: 'farmers.delete',
+  FARMERS_EXPORT: 'farmers.export',
+  
+  // Farms
+  FARMS_CREATE: 'farms.create',
+  FARMS_READ: 'farms.read',
+  FARMS_UPDATE: 'farms.update',
+  FARMS_DELETE: 'farms.delete',
+  // Clusters
   CLUSTERS_CREATE: 'clusters.create',
   CLUSTERS_READ: 'clusters.read',
   CLUSTERS_UPDATE: 'clusters.update',
   CLUSTERS_DELETE: 'clusters.delete',
+  // Certificates
+  CERTIFICATES_CREATE: 'certificates.create',
+  CERTIFICATES_READ: 'certificates.read',
+  CERTIFICATES_UPDATE: 'certificates.update',
+  CERTIFICATES_DELETE: 'certificates.delete',
+  // Roles
+  ROLES_CREATE: 'roles.create',
+  ROLES_READ: 'roles.read',
+  ROLES_UPDATE: 'roles.update',
+  ROLES_DELETE: 'roles.delete',
+  // Analytics
   ANALYTICS_READ: 'analytics.read',
+  // Settings
+  SETTINGS_READ: 'settings.read',
   SETTINGS_UPDATE: 'settings.update',
+  
+  // System Administration
+  SYSTEM_MANAGE_PERMISSIONS: 'system.manage_permissions',
+  SYSTEM_MANAGE_ROLES: 'system.manage_roles',
+  SYSTEM_VIEW_LOGS: 'system.view_logs',
+  SYSTEM_MANAGE_BACKUPS: 'system.manage_backups',
+  SYSTEM_MANAGE_INTEGRATIONS: 'system.manage_integrations',
 }
 
-// Role-based default permissions
+// Role-based default permissions - matches ROLE.md specifications
 export const ROLE_PERMISSIONS = {
-  SUPER_ADMIN: Object.values(PERMISSIONS),
-  ADMIN: [
+  super_admin: Object.values(PERMISSIONS), // Full access to everything
+  admin: [
+    // Users - Full CRUD
     PERMISSIONS.USERS_CREATE,
     PERMISSIONS.USERS_READ,
     PERMISSIONS.USERS_UPDATE,
+    PERMISSIONS.USERS_DELETE,
+    // Agents - Full CRUD
     PERMISSIONS.AGENTS_CREATE,
     PERMISSIONS.AGENTS_READ,
     PERMISSIONS.AGENTS_UPDATE,
     PERMISSIONS.AGENTS_DELETE,
+    // Farmers - Full CRUD + Export
     PERMISSIONS.FARMERS_CREATE,
     PERMISSIONS.FARMERS_READ,
     PERMISSIONS.FARMERS_UPDATE,
     PERMISSIONS.FARMERS_DELETE,
+    PERMISSIONS.FARMERS_EXPORT,
+    // Farms - Full CRUD + Export/Import
+    PERMISSIONS.FARMS_CREATE,
+    PERMISSIONS.FARMS_READ,
+    PERMISSIONS.FARMS_UPDATE,
+    PERMISSIONS.FARMS_DELETE,
+    PERMISSIONS.FARMS_EXPORT,
+    PERMISSIONS.FARMS_IMPORT,
+    // GIS - Full Access
+    PERMISSIONS.GIS_VIEW,
+    PERMISSIONS.GIS_EDIT,
+    PERMISSIONS.GIS_EXPORT,
+    PERMISSIONS.GIS_ANALYZE,
+    // Clusters - Full CRUD
     PERMISSIONS.CLUSTERS_CREATE,
     PERMISSIONS.CLUSTERS_READ,
     PERMISSIONS.CLUSTERS_UPDATE,
     PERMISSIONS.CLUSTERS_DELETE,
+    // Certificates - Full CRUD
+    PERMISSIONS.CERTIFICATES_CREATE,
+    PERMISSIONS.CERTIFICATES_READ,
+    PERMISSIONS.CERTIFICATES_UPDATE,
+    PERMISSIONS.CERTIFICATES_DELETE,
+    // Analytics - Read only
     PERMISSIONS.ANALYTICS_READ,
+    // Settings - Read and Update
+    PERMISSIONS.SETTINGS_READ,
     PERMISSIONS.SETTINGS_UPDATE,
+    // System - No system permissions for admin (only super_admin)
   ],
-  MANAGER: [
+  manager: [
+    // Agents - Read only
     PERMISSIONS.AGENTS_READ,
-    PERMISSIONS.AGENTS_UPDATE,
-    PERMISSIONS.FARMERS_CREATE,
+    // Farmers - Read and Update
     PERMISSIONS.FARMERS_READ,
     PERMISSIONS.FARMERS_UPDATE,
+    // Farms - Read and Update
+    PERMISSIONS.FARMS_READ,
+    PERMISSIONS.FARMS_UPDATE,
+    // GIS - View only
+    PERMISSIONS.GIS_VIEW,
+    // Clusters - Read and Update
     PERMISSIONS.CLUSTERS_READ,
     PERMISSIONS.CLUSTERS_UPDATE,
+    // Analytics - Read only
     PERMISSIONS.ANALYTICS_READ,
   ],
-  AGENT: [
+  agent: [
+    // Farmers - Create, Read, Update
     PERMISSIONS.FARMERS_CREATE,
     PERMISSIONS.FARMERS_READ,
     PERMISSIONS.FARMERS_UPDATE,
+    // Farms - Create, Read, Update
+    PERMISSIONS.FARMS_CREATE,
+    PERMISSIONS.FARMS_READ,
+    PERMISSIONS.FARMS_UPDATE,
+    // GIS - View only
+    PERMISSIONS.GIS_VIEW,
+    // Clusters - Read only
     PERMISSIONS.CLUSTERS_READ,
   ],
-  USER: [
+  viewer: [
+    // Farmers - Read only
     PERMISSIONS.FARMERS_READ,
+    // Farms - Read only
+    PERMISSIONS.FARMS_READ,
+    // GIS - View only
+    PERMISSIONS.GIS_VIEW,
+    // Clusters - Read only
     PERMISSIONS.CLUSTERS_READ,
+    // Analytics - Read only
+    PERMISSIONS.ANALYTICS_READ,
   ],
 }
 

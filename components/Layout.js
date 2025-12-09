@@ -23,28 +23,37 @@ import {
   BellIcon,
   MagnifyingGlassIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline'
+import { usePermissions } from './PermissionProvider'
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Farmers', href: '/farmers', icon: UsersIcon },
-  { name: 'Agents', href: '/agents', icon: UserGroupIcon },
-  { name: 'Clusters', href: '/clusters', icon: BuildingOfficeIcon },
-  { name: 'Farms', href: '/farms', icon: GlobeAltIcon },
-  // { name: 'Map View', href: '/map', icon: MapIcon },
-  // { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
-  { name: 'Users', href: '/users', icon: DocumentTextIcon },
-  { name: 'GIS (Google)', href: '/gis-map-google', icon: MapIcon },
-  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
+// Navigation with permission requirements - matches ROLE.md
+const navigationItems = [
+  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, requiredPermission: null }, // Always visible
+  { name: 'Farmers', href: '/farmers', icon: UsersIcon, requiredPermission: 'farmers.read' },
+  { name: 'Agents', href: '/agents', icon: UserGroupIcon, requiredPermission: 'agents.read' },
+  { name: 'Clusters', href: '/clusters', icon: BuildingOfficeIcon, requiredPermission: 'clusters.read' },
+  { name: 'Farms', href: '/farms', icon: GlobeAltIcon, requiredPermission: 'farms.read' },
+  { name: 'Users', href: '/users', icon: DocumentTextIcon, requiredPermission: 'users.read' },
+  { name: 'Roles', href: '/roles', icon: ShieldCheckIcon, requiredPermission: 'roles.read' },
+  { name: 'GIS (Google)', href: '/gis-map-google', icon: MapIcon, requiredPermission: 'gis.view' },
+  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon, requiredPermission: 'settings.read' },
 ]
 
 export default function Layout({ children, title = 'CCSA FIMS' }) {
   const { data: session } = useSession()
+  const { hasPermission } = usePermissions()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
+
+  // Filter navigation based on user permissions
+  const navigation = navigationItems.filter(item => {
+    if (!item.requiredPermission) return true // No permission required
+    return hasPermission(item.requiredPermission)
+  })
 
   // Update time every minute
   useEffect(() => {
