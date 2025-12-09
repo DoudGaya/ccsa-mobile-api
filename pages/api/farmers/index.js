@@ -135,14 +135,25 @@ async function getFarmers(req, res) {
     ProductionLogger.debug('Where clause for farmers query', whereClause);
 
     // Use retry logic for database queries
+    // Optimize: Select only necessary fields for the list view
     const [farmers, total] = await withRetry(async () => {
       return await Promise.all([
         prisma.farmer.findMany({
           where: whereClause,
-          include: {
-            referees: true,
-            certificates: true,
-            farms: true,
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            phoneNumber: true,
+            nin: true,
+            state: true,
+            lga: true,
+            localGovernment: true,
+            status: true,
+            createdAt: true,
             cluster: {
               select: {
                 id: true,
@@ -151,6 +162,7 @@ async function getFarmers(req, res) {
                 clusterLeadLastName: true,
               },
             },
+            // Only select minimal agent info
             agent: {
               select: {
                 id: true,
@@ -158,6 +170,12 @@ async function getFarmers(req, res) {
                 displayName: true,
               },
             },
+            // Don't fetch all related records for list view
+            _count: {
+              select: {
+                farms: true
+              }
+            }
           },
           orderBy: { createdAt: 'desc' },
           skip: offset,

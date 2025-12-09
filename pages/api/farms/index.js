@@ -35,47 +35,29 @@ export default async function handler(req, res) {
     
     if (req.method === 'GET') {
       // Get all farms or farms by farmer ID
-      const { farmerId } = req.query;
+      const { farmerId, page = 1, limit = 50 } = req.query;
       
-      let farms;
+      // Cap the limit to prevent massive responses (max 100)
+      const safeLimit = Math.min(parseInt(limit) || 50, 100);
+      const offset = (parseInt(page) - 1) * safeLimit;
+
+      let whereClause = {};
+      
       if (farmerId) {
-        farms = await prisma.farm.findMany({
-          where: { farmerId },
-          include: {
-            farmer: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                nin: true,
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        });
-      } else if (req.isAdmin) {
-        // Admin can see all farms
-        farms = await prisma.farm.findMany({
-          include: {
-            farmer: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                nin: true,
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        });
-      } else {
+        whereClause = { farmerId };
+      } else if (!req.isAdmin) {
         // Agent can only see farms from their farmers
-        farms = await prisma.farm.findMany({
-          where: {
-            farmer: {
-              agentId: req.user.uid
-            }
-          },
+        whereClause = {
+          farmer: {
+            agentId: req.user.uid
+          }
+        };
+      }
+
+      // Use Promise.all for parallel execution of count and data fetch
+      const [farms, total] = await Promise.all([
+        prisma.farm.findMany({
+          where: whereClause,
           include: {
             farmer: {
               select: {
@@ -86,11 +68,22 @@ export default async function handler(req, res) {
               }
             }
           },
-          orderBy: { createdAt: 'desc' }
-        });
-      }
+          orderBy: { createdAt: 'desc' },
+          skip: offset,
+          take: safeLimit
+        }),
+        prisma.farm.count({ where: whereClause })
+      ]);
       
-      return res.status(200).json({ farms });
+      return res.status(200).json({ 
+        farms,
+        pagination: {
+          page: parseInt(page),
+          limit: safeLimit,
+          total,
+          pages: Math.ceil(total / safeLimit)
+        }
+      });
     }
     
     if (req.method === 'POST') {

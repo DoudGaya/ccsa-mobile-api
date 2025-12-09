@@ -21,70 +21,95 @@ export default async function handler(req, res) {
     // Goal: 2 Million farmers
     const GOAL_FARMERS = 2000000;
 
-    // Get basic counts
+    // Set cache headers for better performance (cache for 5 minutes)
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+
+    // Execute independent queries in parallel
     const [
       totalFarmers,
       totalAgents,
       totalClusters,
       totalFarms,
-      allFarms
+      farmAggregates,
+      primaryCropGroups,
+      secondaryCropsRaw,
+      farmersByStateRaw,
+      farmersByLGA,
+      farmersByGenderRaw,
+      clustersWithFarmers
     ] = await Promise.all([
       prisma.farmer.count(),
-      prisma.user.count({ where: { role: 'agent' } }), // Count users with agent role
+      prisma.user.count({ where: { role: 'agent' } }),
       prisma.cluster.count(),
       prisma.farm.count(),
-      prisma.farm.findMany({
-        select: {
-          farmSize: true,
-          farmPolygon: true,
-          primaryCrop: true,
-          secondaryCrop: true
+      // Calculate total hectares directly in DB
+      prisma.farm.aggregate({
+        _sum: {
+          farmSize: true
         }
-      })
-    ]);
-
-    // Calculate total hectares directly from database - SINGLE SOURCE OF TRUTH
-    const totalHectares = allFarms.reduce((sum, farm) => {
-      return sum + (parseFloat(farm.farmSize) || 0);
-    }, 0);
-
-    // Get crop analytics
-    const cropAnalytics = await Promise.all([
-      // Primary crops
+      }),
+      // Group primary crops
       prisma.farm.groupBy({
         by: ['primaryCrop'],
         _count: { id: true },
         where: {
-          primaryCrop: {
-            not: null,
-            not: ''
-          }
+          primaryCrop: { not: null }
         }
       }),
-      // Secondary crops - now an array field
+      // Fetch only secondary crops (lightweight)
       prisma.farm.findMany({
         select: { secondaryCrop: true },
         where: {
-          NOT: {
-            secondaryCrop: { isEmpty: true }
+          NOT: { secondaryCrop: { equals: [] } } // Assuming it's an array
+        }
+      }),
+      // Farmers by state
+      prisma.farmer.groupBy({
+        by: ['state'],
+        _count: { id: true }
+      }),
+      // Farmers by LGA (top 20)
+      prisma.farmer.groupBy({
+        by: ['state', 'lga'],
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 20
+      }),
+      // Farmers by gender
+      prisma.farmer.groupBy({
+        by: ['gender'],
+        _count: { id: true }
+      }),
+      // Clusters with farmer counts
+      prisma.cluster.findMany({
+        include: {
+          _count: {
+            select: { farmers: true }
           }
+        },
+        orderBy: {
+          farmers: { _count: 'desc' }
         }
       })
     ]);
 
+    // Calculate total hectares from aggregation result
+    const totalHectares = farmAggregates._sum.farmSize || 0;
+
     // Process crop data
-    const primaryCrops = cropAnalytics[0].map(crop => ({
+    const primaryCrops = primaryCropGroups.map(crop => ({
       crop: crop.primaryCrop,
       count: crop._count.id,
       type: 'primary'
     }));
 
-    // Process secondary crops (now array instead of comma-separated string)
+    // Process secondary crops
     const secondaryCropCounts = {};
-    cropAnalytics[1].forEach(farm => {
+    secondaryCropsRaw.forEach(farm => {
       if (farm.secondaryCrop && Array.isArray(farm.secondaryCrop)) {
         farm.secondaryCrop.forEach(crop => {
-          // Clean up the crop value (remove {}, trim)
+          if (!crop) return;
+          // Clean up the crop value
           const cleanCrop = crop.replace(/[{}]/g, '').trim();
           if (cleanCrop) {
             secondaryCropCounts[cleanCrop] = (secondaryCropCounts[cleanCrop] || 0) + 1;
@@ -119,15 +144,7 @@ export default async function handler(req, res) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    // Get farmers by state (handle case sensitivity)
-    const farmersByStateRaw = await prisma.farmer.groupBy({
-      by: ['state'],
-      _count: {
-        id: true
-      }
-    });
-
-    // Merge case-sensitive states
+    // Merge case-sensitive states (using data from parallel query)
     const stateMap = {};
     farmersByStateRaw.forEach(item => {
       const normalizedState = item.state?.toLowerCase();
@@ -145,29 +162,7 @@ export default async function handler(req, res) {
     const farmersByState = Object.values(stateMap)
       .sort((a, b) => b._count.id - a._count.id);
 
-    // Get farmers by LGA (top 20)
-    const farmersByLGA = await prisma.farmer.groupBy({
-      by: ['state', 'lga'],
-      _count: {
-        id: true
-      },
-      orderBy: {
-        _count: {
-          id: 'desc'
-        }
-      },
-      take: 20
-    });
-
-    // Get farmers by gender (normalize M/F to Male/Female)
-    const farmersByGenderRaw = await prisma.farmer.groupBy({
-      by: ['gender'],
-      _count: {
-        id: true
-      }
-    });
-
-    // Normalize gender data
+    // Normalize gender data (using data from parallel query)
     const genderMap = { Male: 0, Female: 0 };
     farmersByGenderRaw.forEach(item => {
       const gender = item.gender?.toLowerCase();
@@ -183,23 +178,7 @@ export default async function handler(req, res) {
       _count: { id: count }
     }));
 
-    // Get farmers by cluster with detailed information
-    const clustersWithFarmers = await prisma.cluster.findMany({
-      include: {
-        _count: {
-          select: {
-            farmers: true
-          }
-        }
-      },
-      orderBy: {
-        farmers: {
-          _count: 'desc'
-        }
-      }
-    });
-
-    // Calculate cluster analytics with progress tracking
+    // Calculate cluster analytics with progress tracking (using data from parallel query)
     const clusterAnalytics = clustersWithFarmers.map(cluster => {
       const farmerCount = cluster._count.farmers;
       const clusterProgress = farmerCount > 0 ? (farmerCount / totalFarmers) * 100 : 0;
@@ -222,16 +201,10 @@ export default async function handler(req, res) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentRegistrations = await prisma.farmer.count({
-      where: {
-        createdAt: {
-          gte: thirtyDaysAgo
-        }
-      }
-    });
-
-    // Get monthly registration trends (last 12 months)
-    const monthlyTrends = [];
+    // Prepare monthly trend dates
+    const trendQueries = [];
+    const trendLabels = [];
+    
     for (let i = 11; i >= 0; i--) {
       const startDate = new Date();
       startDate.setMonth(startDate.getMonth() - i);
@@ -241,21 +214,40 @@ export default async function handler(req, res) {
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + 1);
       
-      const count = await prisma.farmer.count({
-        where: {
-          createdAt: {
-            gte: startDate,
-            lt: endDate
-          }
-        }
-      });
-      
-      monthlyTrends.push({
+      trendLabels.push({
         month: startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        count: count,
         date: startDate.toISOString()
       });
+
+      trendQueries.push(
+        prisma.farmer.count({
+          where: {
+            createdAt: {
+              gte: startDate,
+              lt: endDate
+            }
+          }
+        })
+      );
     }
+
+    // Execute trend queries and recent registrations in parallel
+    const [recentRegistrations, ...monthlyCounts] = await Promise.all([
+      prisma.farmer.count({
+        where: {
+          createdAt: {
+            gte: thirtyDaysAgo
+          }
+        }
+      }),
+      ...trendQueries
+    ]);
+
+    // Map results back to labels
+    const monthlyTrends = monthlyCounts.map((count, index) => ({
+      ...trendLabels[index],
+      count
+    }));
 
     // Calculate progress percentage
     const progressPercentage = (totalFarmers / GOAL_FARMERS) * 100;
