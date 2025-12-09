@@ -1,6 +1,7 @@
 import { authMiddleware } from '../../../lib/authMiddleware';
 import prisma, { withRetry } from '../../../lib/prisma';
-import { getSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
 import { updateFarmerStatusByFarms } from '../../../lib/farmerStatusUtils';
 
 export default async function handler(req, res) {
@@ -15,7 +16,8 @@ export default async function handler(req, res) {
 
   try {
     // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)
-    const session = await getSession({ req });
+    // Use getServerSession instead of getSession to avoid internal HTTP requests
+    const session = await getServerSession(req, res, authOptions);
     
     if (session) {
       // Web admin user - has access to all farms

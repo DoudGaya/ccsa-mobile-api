@@ -1,7 +1,8 @@
 import prisma, { withRetry } from '../../../lib/prisma';
 import { farmerSchema, refereeSchema } from '../../../lib/validation';
 import { authMiddleware } from '../../../lib/authMiddleware';
-import { getSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
 import { asyncHandler, corsMiddleware } from '../../../lib/errorHandler';
 import ProductionLogger from '../../../lib/productionLogger';
 
@@ -17,7 +18,8 @@ export default async function handler(req, res) {
 
   try {
     // Check if this is a web admin request (NextAuth session) or mobile agent request (Firebase token)
-    const session = await getSession({ req });
+    // Use getServerSession instead of getSession to avoid internal HTTP requests
+    const session = await getServerSession(req, res, authOptions);
     
     if (session) {
       // Web admin user - has access to all farmers
@@ -73,10 +75,13 @@ async function getFarmers(req, res) {
       endDate = ''
     } = req.query;
 
-    ProductionLogger.debug('Farmers API query params', { page, limit, search, state, status, startDate, endDate });
+    // Cap the limit to prevent massive responses (max 100)
+    const safeLimit = Math.min(parseInt(limit) || 10, 100);
+
+    ProductionLogger.debug('Farmers API query params', { page, limit: safeLimit, search, state, status, startDate, endDate });
     ProductionLogger.debug('User context', { isAdmin: req.isAdmin, userUid: req.user?.uid });
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const offset = (parseInt(page) - 1) * safeLimit;
 
     // Handle date filtering
     let dateFilter = {};
@@ -156,7 +161,7 @@ async function getFarmers(req, res) {
           },
           orderBy: { createdAt: 'desc' },
           skip: offset,
-          take: parseInt(limit),
+          take: safeLimit,
         }),
         prisma.farmer.count({ where: whereClause }),
       ]);
@@ -168,9 +173,9 @@ async function getFarmers(req, res) {
       farmers,
       pagination: {
         page: parseInt(page),
-        limit: parseInt(limit),
+        limit: safeLimit,
         total,
-        pages: Math.ceil(total / parseInt(limit)),
+        pages: Math.ceil(total / safeLimit),
       },
     });
   } catch (error) {
