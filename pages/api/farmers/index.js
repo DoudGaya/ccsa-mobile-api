@@ -86,7 +86,7 @@ async function getFarmers(req, res) {
     } = req.query;
 
     // Cap the limit to prevent massive responses (max 200 for infinite scroll)
-    const safeLimit = Math.min(parseInt(limit) || 50, 200);
+    const safeLimit = Math.min(parseInt(limit) || 50, 1200);
 
     ProductionLogger.debug('Farmers API query params', { page, limit: safeLimit, search, state, status, startDate, endDate });
     ProductionLogger.debug('User context', { isAdmin: req.isAdmin, userUid: req.user?.uid });
