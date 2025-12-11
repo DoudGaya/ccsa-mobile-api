@@ -2,6 +2,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
+import { TableLoader, CardLoader } from '../components/PageLoader'
 import { 
   UsersIcon, 
   MapIcon,

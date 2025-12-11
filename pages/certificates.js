@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Layout from '../components/Layout'
+import { TableLoader } from '../components/PageLoader'
 import { usePermissions, PermissionGate, PERMISSIONS } from '../components/PermissionProvider'
 import { 
   DocumentTextIcon,
