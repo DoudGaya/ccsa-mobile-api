@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
+import { TableLoader, CardLoader, ChartLoader } from '../components/PageLoader'
 import Link from 'next/link'
 import { usePermissions, PermissionGate, PERMISSIONS } from '../components/PermissionProvider'
 import hierarchicalData from '../data/hierarchical-data'
@@ -279,8 +280,10 @@ export default function Farms() {
   if (status === 'loading' || loading) {
     return (
       <Layout title="Farms">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+        <div className="space-y-6">
+          <CardLoader count={4} />
+          <ChartLoader count={2} />
+          <TableLoader rows={8} cols={7} />
         </div>
       </Layout>
     )

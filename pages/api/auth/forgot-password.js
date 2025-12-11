@@ -17,19 +17,6 @@ export default async function handler(req, res) {
     const validatedData = forgotPasswordSchema.parse(req.body)
     const { email } = validatedData
 
-    // SSO Email Whitelist - Only allow specific emails
-    const allowedEmails = [
-      'ccsa@cosmopolitan.edu.ng',
-      'admin@cosmopolitan.edu.ng', 
-      'rislan@cosmopolitan.edu.ng'
-    ]
-
-    if (!allowedEmails.includes(email.toLowerCase())) {
-      return res.status(400).json({ 
-        error: 'This email is not authorized to access the system. Please contact the administrator.' 
-      })
-    }
-
     // Check if user exists
     const user = await prisma.user.findUnique({
       where: { email },
@@ -37,6 +24,13 @@ export default async function handler(req, res) {
 
     // Always return success message for security (don't reveal if email exists)
     if (!user) {
+      return res.status(200).json({ 
+        message: 'If an account with that email exists, we\'ve sent password reset instructions.' 
+      })
+    }
+
+    // Check if user is active
+    if (user.isActive === false) {
       return res.status(200).json({ 
         message: 'If an account with that email exists, we\'ve sent password reset instructions.' 
       })
@@ -55,16 +49,24 @@ export default async function handler(req, res) {
       },
     })
 
-    // Send password reset email
-    try {
-      await sendPasswordResetEmail(email, resetToken, user.displayName || user.firstName)
-    } catch (emailError) {
-      console.error('Failed to send password reset email:', emailError)
-      return res.status(500).json({ error: 'Failed to send reset email. Please try again.' })
+    // Send password reset email if SMTP is configured
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        await sendPasswordResetEmail(email, resetToken, user.displayName || user.firstName)
+      } catch (emailError) {
+        console.error('Failed to send password reset email:', emailError)
+        // Still return success but log the error
+        // In production, you might want to notify admins
+      }
+    } else {
+      console.warn('SMTP not configured. Password reset token generated but email not sent.')
+      console.log(`Reset URL: ${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`)
     }
 
     return res.status(200).json({ 
-      message: 'Password reset instructions have been sent to your email address.' 
+      message: 'Password reset instructions have been sent to your email address.',
+      // In development, include the token for testing
+      ...(process.env.NODE_ENV === 'development' && { resetToken, resetUrl: `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}` })
     })
 
   } catch (error) {

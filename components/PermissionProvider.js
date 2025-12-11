@@ -42,6 +42,8 @@ export const PERMISSIONS = {
   ROLES_DELETE: 'roles.delete',
   // Analytics
   ANALYTICS_READ: 'analytics.read',
+  // Dashboard
+  DASHBOARD_ACCESS: 'dashboard.access',
   // Settings
   SETTINGS_READ: 'settings.read',
   SETTINGS_UPDATE: 'settings.update',
@@ -98,6 +100,8 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.CERTIFICATES_DELETE,
     // Analytics - Read only
     PERMISSIONS.ANALYTICS_READ,
+    // Dashboard - Full Access
+    PERMISSIONS.DASHBOARD_ACCESS,
     // Settings - Read and Update
     PERMISSIONS.SETTINGS_READ,
     PERMISSIONS.SETTINGS_UPDATE,

@@ -30,7 +30,7 @@ import { usePermissions } from './PermissionProvider'
 
 // Navigation with permission requirements - matches ROLE.md
 const navigationItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, requiredPermission: null }, // Always visible
+  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, requiredPermission: 'dashboard.access' },
   { name: 'Farmers', href: '/farmers', icon: UsersIcon, requiredPermission: 'farmers.read' },
   { name: 'Agents', href: '/agents', icon: UserGroupIcon, requiredPermission: 'agents.read' },
   { name: 'Clusters', href: '/clusters', icon: BuildingOfficeIcon, requiredPermission: 'clusters.read' },

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
+import { MapLoader } from '../components/PageLoader';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
 
@@ -11,11 +12,8 @@ const DynamicMapContainer = dynamic(
   { 
     ssr: false,
     loading: () => (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-600">Loading map...</p>
-        </div>
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <MapLoader />
       </div>
     )
   }
@@ -523,11 +521,8 @@ export default function GISMap() {
               </div>
               
               {loading && (
-                <div className="absolute inset-0 bg-gray-50 bg-opacity-75 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading farm data...</p>
-                  </div>
+                <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center rounded-lg">
+                  <MapLoader />
                 </div>
               )}
             </div>

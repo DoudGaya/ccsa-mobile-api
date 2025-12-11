@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 import Layout from '../components/Layout'
+import { TableLoader, CardLoader } from '../components/PageLoader'
 import { usePermissions, PermissionGate, PERMISSIONS } from '../components/PermissionProvider'
 import { 
   PlusIcon, 
@@ -52,6 +53,7 @@ import {
     { id: 'roles.update', name: 'Update Roles', category: 'Roles' },
     { id: 'roles.delete', name: 'Delete Roles', category: 'Roles' },
     { id: 'analytics.read', name: 'View Analytics', category: 'Analytics' },
+    { id: 'dashboard.access', name: 'Access Dashboard', category: 'Dashboard' },
     { id: 'settings.read', name: 'View Settings', category: 'Settings' },
     { id: 'settings.update', name: 'Update Settings', category: 'Settings' },
     { id: 'system.manage_permissions', name: 'Manage Permissions', category: 'System Administration', requiresSuperAdmin: true },
@@ -63,6 +65,7 @@ import {
   export default function Users() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { hasPermission } = usePermissions()
   const [activeTab, setActiveTab] = useState('users')
   const [users, setUsers] = useState([])
   const [roles, setRoles] = useState([])
@@ -74,6 +77,7 @@ import {
   const [modalType, setModalType] = useState('user') // 'user', 'role'
   const [editingItem, setEditingItem] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
 
   // Password generation utility
   const generateRandomPassword = () => {
@@ -152,7 +156,11 @@ import {
 
   const handleCreateUser = async (e) => {
     e.preventDefault()
+    if (submitting) return
+    
     try {
+      setSubmitting(true)
+      setError('')
       // Determine if this is create or update based on editingItem
       const isUpdate = !!editingItem && editingItem.id
       
@@ -201,14 +209,24 @@ import {
       const errorMessage = error.message || (editingItem ? 'An error occurred while updating the user' : 'An error occurred while creating the user')
       setError(errorMessage)
       console.error('Error:', error)
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const handleCreateRole = async (e) => {
     e.preventDefault()
+    if (submitting) return
+    
     try {
-      const response = await fetch('/api/roles', {
-        method: 'POST',
+      setSubmitting(true)
+      setError('')
+      const isUpdate = !!editingItem
+      const url = isUpdate ? `/api/roles/${editingItem.id}` : '/api/roles'
+      const method = isUpdate ? 'PUT' : 'POST'
+      
+      const response = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(roleForm)
       })
@@ -217,12 +235,17 @@ import {
         await fetchData()
         resetRoleForm()
         setShowModal(false)
+        setEditingItem(null)
       } else {
         const errorData = await response.json()
-        setError(errorData.error || 'Failed to create role')
+        setError(errorData.error || (isUpdate ? 'Failed to update role' : 'Failed to create role'))
+        console.error(`Error ${isUpdate ? 'updating' : 'creating'} role:`, errorData)
       }
     } catch (error) {
-      setError('An error occurred while creating the role')
+      setError(editingItem ? 'An error occurred while updating the role' : 'An error occurred while creating the role')
+      console.error('Error:', error)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -337,8 +360,9 @@ import {
   if (loading) {
     return (
       <Layout title="Users & Permissions">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="space-y-6">
+          <CardLoader count={4} />
+          <TableLoader rows={8} cols={6} />
         </div>
       </Layout>
     )
@@ -851,9 +875,20 @@ import {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                      disabled={submitting}
+                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center"
                     >
-                      {editingItem ? 'Update' : 'Create'}
+                      {submitting ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          {editingItem ? 'Updating...' : 'Creating...'}
+                        </>
+                      ) : (
+                        <>{editingItem ? 'Update' : 'Create'}</>
+                      )}
                     </button>
                   </div>
                 </form>
@@ -964,9 +999,20 @@ import {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                      disabled={submitting}
+                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center"
                     >
-                      {editingItem ? 'Update' : 'Create'}
+                      {submitting ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          {editingItem ? 'Updating...' : 'Creating...'}
+                        </>
+                      ) : (
+                        <>{editingItem ? 'Update' : 'Create'}</>
+                      )}
                     </button>
                   </div>
                 </form>

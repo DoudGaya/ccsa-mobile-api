@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
+import { DashboardLoader, ChartLoader, CardLoader } from '../components/PageLoader'
 import {
   ChartBarIcon,
   UsersIcon,
@@ -524,8 +525,9 @@ export default function Analytics() {
   if (status === 'loading' || loading) {
     return (
       <Layout title="Analytics">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        <div className="space-y-6">
+          <CardLoader count={4} />
+          <ChartLoader count={4} />
         </div>
       </Layout>
     )

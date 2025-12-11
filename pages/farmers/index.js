@@ -5,6 +5,7 @@ import Layout from '../../components/Layout'
 import Link from 'next/link'
 import { usePermissions, PermissionGate, PERMISSIONS } from '../../components/PermissionProvider'
 import hierarchicalData from '../../data/hierarchical-data'
+import { TableLoader } from '../../components/PageLoader'
 import { 
   MagnifyingGlassIcon as SearchIcon,
   EyeIcon,
@@ -104,13 +105,10 @@ export default function Farmers() {
   }, [session, status, pagination.page, hasPermission, permissionsLoading])
 
   useEffect(() => {
-    // Reset to first page when filters change
-    if (pagination.page !== 1) {
-      setPagination(prev => ({ ...prev, page: 1 }))
-    } else {
-      fetchFarmers()
-    }
-  }, [searchTerm, filters])
+    // Reset to first page and fetch immediately when filters change
+    setPagination(prev => ({ ...prev, page: 1 }))
+    fetchFarmers()
+  }, [searchTerm, filters.state, filters.gender, filters.status, filters.cluster, filters.startDate, filters.endDate])
 
   const updateFarmerStatus = async (farmerId, newStatus) => {
     try {
@@ -456,8 +454,8 @@ export default function Farmers() {
   if (status === 'loading' || permissionsLoading || loading) {
     return (
       <Layout title="Farmers">
-        <div className="flex justify-center items-center h-64">
-          <div className="spinner"></div>
+        <div className="space-y-6">
+          <TableLoader />
         </div>
       </Layout>
     )

@@ -160,8 +160,9 @@ export default function FilteredView() {
   if (status === 'loading' || loading) {
     return (
       <Layout title="Filtered Farmers">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <div className="space-y-6">
+          <CardLoader count={3} />
+          <TableLoader rows={8} cols={6} />
         </div>
       </Layout>
     )

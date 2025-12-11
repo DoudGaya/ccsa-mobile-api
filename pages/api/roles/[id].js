@@ -79,17 +79,21 @@ async function updateRole(req, res, id) {
   try {
     const { name, description, permissions, isActive } = req.body
 
+    console.log('Update role request:', { id, name, description, permissions: permissions?.length, isActive })
+
     // Check if role exists
     const existingRole = await prisma.roles.findUnique({
       where: { id }
     })
 
     if (!existingRole) {
+      console.log('Role not found:', { id })
       return res.status(404).json({ error: 'Role not found' })
     }
 
     // Prevent updating system roles
     if (existingRole.isSystem) {
+      console.log('Cannot modify system role:', { id, name: existingRole.name })
       return res.status(400).json({ error: 'Cannot modify system roles' })
     }
 
@@ -141,6 +145,7 @@ async function updateRole(req, res, id) {
       }
     })
 
+    console.log('Role updated successfully:', { id: updatedRole.id, name: updatedRole.name })
     return res.status(200).json(updatedRole)
   } catch (error) {
     console.error('Error updating role:', error)

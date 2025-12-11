@@ -3,6 +3,9 @@ import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Layout from '../components/Layout'
+import { DashboardLoader } from '../components/PageLoader'
+import { usePermissions, PERMISSIONS } from '../components/PermissionProvider'
+import { getFirstAvailableRoute } from '../lib/redirectHelper'
 import { 
   UsersIcon, 
   UserGroupIcon, 
@@ -57,6 +60,7 @@ ChartJS.register(
 export default function Dashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { hasPermission } = usePermissions()
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -67,8 +71,16 @@ export default function Dashboard() {
       return
     }
     
+    // Check dashboard access permission
+    if (!hasPermission(PERMISSIONS.DASHBOARD_ACCESS)) {
+      // Redirect to first available route instead of signin
+      const firstAvailableRoute = getFirstAvailableRoute(hasPermission)
+      router.push(firstAvailableRoute)
+      return
+    }
+    
     fetchDashboardAnalytics()
-  }, [session, status])
+  }, [session, status, hasPermission])
 
   const fetchDashboardAnalytics = async () => {
     try {
@@ -260,9 +272,7 @@ export default function Dashboard() {
   if (status === 'loading' || loading) {
     return (
       <Layout title="Dashboard">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        </div>
+        <DashboardLoader />
       </Layout>
     )             
   }

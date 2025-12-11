@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import Layout from '../../components/Layout'
 import Link from 'next/link'
 import { PermissionGate, PERMISSIONS } from '../../components/PermissionProvider'
+import { TableLoader } from '../../components/PageLoader'
 import { 
   PlusIcon,
   UserIcon,
@@ -81,8 +82,9 @@ export default function Agents() {
   }, [agents])
 
   useEffect(() => {
+    // Filter agents instantly when search or filters change
     filterAgents()
-  }, [agents, searchTerm, filters])
+  }, [agents, searchTerm, filters.state, filters.status])
 
   const fetchAgents = async (page = 1) => {
     try {
@@ -297,8 +299,8 @@ export default function Agents() {
   if (status === 'loading' || loading) {
     return (
       <Layout title="Agents">
-        <div className="flex justify-center items-center h-64">
-          <div className="spinner"></div>
+        <div className="space-y-6">
+          <TableLoader />
         </div>
       </Layout>
     )

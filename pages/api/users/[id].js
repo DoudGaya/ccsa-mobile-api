@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import prisma from '../../../lib/prisma'
+import bcrypt from 'bcryptjs'
 
 export default async function handler(req, res) {
   try {
@@ -57,7 +58,9 @@ async function updateUser(req, res, id) {
       role, // This is the role ID for RBAC
       groupIds = [],
       permissions = [],
-      isActive
+      isActive,
+      password, // New password field for admin password reset
+      sendPasswordEmail = false
     } = req.body
 
     // Check if user exists
@@ -67,6 +70,18 @@ async function updateUser(req, res, id) {
 
     if (!existingUser) {
       return res.status(404).json({ error: 'User not found' })
+    }
+
+    // Hash password if provided
+    let hashedPassword = undefined
+    if (password) {
+      // Validate password strength
+      if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters long' })
+      }
+      
+      const saltRounds = 12
+      hashedPassword = await bcrypt.hash(password, saltRounds)
     }
 
     // Check if email is already taken by another user
@@ -126,7 +141,11 @@ async function updateUser(req, res, id) {
           ...(firstName !== undefined && { firstName }),
           ...(lastName !== undefined && { lastName }),
           ...(email && { email }),
-          ...(isActive !== undefined && { isActive })
+          ...(isActive !== undefined && { isActive }),
+          ...(hashedPassword && { 
+            password: hashedPassword,
+            passwordChangeRequired: true // User should change password on first login
+          })
         },
         select: {
           id: true,

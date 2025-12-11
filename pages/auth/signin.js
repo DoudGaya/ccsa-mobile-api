@@ -21,6 +21,10 @@ export default function SignIn() {
         setSSOError('Your email is not registered. Contact the administrator.')
       } else if (router.query.error === 'sso_disabled') {
         setSSOError('SSO is not enabled for your account. Use credentials instead.')
+      } else if (router.query.error === 'no_dashboard_access') {
+        setSSOError('You do not have permission to access the dashboard.')
+      } else if (router.query.error === 'no_permissions') {
+        setSSOError('You do not have any permissions assigned. Contact the administrator.')
       } else if (router.query.error === 'callback') {
         setSSOError('An error occurred during sign-in. Please try again.')
       }
@@ -45,10 +49,16 @@ export default function SignIn() {
           setError('Invalid email or password')
         } else if (result.error.includes('not authorized')) {
           setError('This email is not authorized to access the system. Please contact the administrator.')
+        } else if (result.error.includes('mobile application')) {
+          setError('Agents can only access the mobile application. Please download the CCSA mobile app.')
+        } else if (result.error.includes('deactivated')) {
+          setError('Your account has been deactivated. Please contact the administrator.')
         } else {
-          setError('Authentication failed. Please try again.')
+          setError(result.error || 'Authentication failed. Please try again.')
         }
       } else {
+        // After successful login, go to dashboard
+        // Dashboard will auto-redirect to first available route if no dashboard permission
         router.push('/dashboard')
       }
     } catch (error) {

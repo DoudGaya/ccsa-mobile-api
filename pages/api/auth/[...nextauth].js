@@ -28,18 +28,6 @@ export const authOptions = {
           return null
         }
 
-        // SSO Email Whitelist - Only allow specific emails
-        const allowedEmails = [
-          'ccsa@cosmopolitan.edu.ng',
-          'admin@cosmopolitan.edu.ng', 
-          'rislan@cosmopolitan.edu.ng'
-        ]
-
-        if (!allowedEmails.includes(credentials.email.toLowerCase())) {
-          ProductionLogger.warn(`Unauthorized login attempt from: ${credentials.email}`)
-          throw new Error('This email is not authorized to access the system. Please contact the administrator.')
-        }
-
         try {
           // Find user in database with roles and permissions
           const user = await withRetry(async () => {
@@ -65,7 +53,20 @@ export const authOptions = {
           });
 
           if (!user || !user.password) {
+            ProductionLogger.warn(`Login attempt for non-existent user: ${credentials.email}`)
             return null
+          }
+
+          // Check if user account is active
+          if (user.isActive === false) {
+            ProductionLogger.warn(`Login attempt for inactive user: ${credentials.email}`)
+            throw new Error('Your account has been deactivated. Please contact the administrator.')
+          }
+
+          // Block agents from web access - they can only use mobile app
+          if (user.role === 'agent') {
+            ProductionLogger.warn(`Agent attempted web login: ${credentials.email}`)
+            throw new Error('Agents can only access the mobile application. Please download the CCSA mobile app.')
           }
 
           // Verify password

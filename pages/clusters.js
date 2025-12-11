@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
+import { TableLoader, CardLoader } from '../components/PageLoader'
 import LocationSelect from '../components/LocationSelect'
 import {
   PlusIcon,
@@ -300,8 +301,9 @@ export default function Clusters() {
   if (status === 'loading' || loading) {
     return (
       <Layout title="Clusters">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        <div className="space-y-6">
+          <CardLoader count={3} />
+          <TableLoader rows={8} cols={6} />
         </div>
       </Layout>
     )

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import Layout from '../components/Layout'
+import { CardLoader } from '../components/PageLoader'
 import { usePermissions, PermissionGate, PERMISSIONS } from '../components/PermissionProvider'
 import { 
   UserCircleIcon,
@@ -184,8 +185,8 @@ export default function Profile() {
   if (status === 'loading') {
     return (
       <Layout title="Profile">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="max-w-4xl mx-auto space-y-6">
+          <CardLoader count={2} />
         </div>
       </Layout>
     )

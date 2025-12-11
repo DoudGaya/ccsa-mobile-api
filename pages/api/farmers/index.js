@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { asyncHandler, corsMiddleware } from '../../../lib/errorHandler';
 import ProductionLogger from '../../../lib/productionLogger';
-import { getUserPermissions, hasPermission } from '../../../lib/permissions';
+import { getUserPermissions, hasPermission, checkPermission } from '../../../lib/permissions';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -48,13 +48,13 @@ export default async function handler(req, res) {
     switch (method) {
       case 'GET':
         // Check farmers.read permission
-        if (req.isAdmin && !hasPermission(req.user.permissions, 'farmers.read')) {
+        if (req.isAdmin && !checkPermission(req.user.permissions, 'farmers.read')) {
           return res.status(403).json({ error: 'Insufficient permissions to view farmers' });
         }
         return await getFarmers(req, res);
       case 'POST':
         // Check farmers.create permission
-        if (req.isAdmin && !hasPermission(req.user.permissions, 'farmers.create')) {
+        if (req.isAdmin && !checkPermission(req.user.permissions, 'farmers.create')) {
           return res.status(403).json({ error: 'Insufficient permissions to create farmers' });
         }
         return await createFarmer(req, res);
@@ -76,17 +76,26 @@ async function getFarmers(req, res) {
   try {
     const { 
       page = 1, 
-      limit = 50, // Increased default for better mobile experience
+      limit = 100, // Increased default for better mobile experience
       search = '', 
       state = '', 
       cluster = '',
       status, // No default - mobile agents should see all their farmers regardless of status
       startDate = '',
-      endDate = ''
+      endDate = '',
+      loadAll = 'false' // Allow loading all farmers for agents
     } = req.query;
 
-    // Cap the limit to prevent massive responses (max 200 for infinite scroll)
-    const safeLimit = Math.min(parseInt(limit) || 50, 1200);
+    // For mobile agents requesting all farmers, remove limit
+    // For web admins, cap at 500 to prevent database overload
+    let safeLimit;
+    if (loadAll === 'true' && !req.isAdmin) {
+      // Mobile agents can load all their farmers (no limit)
+      safeLimit = undefined;
+    } else {
+      // Web admin or paginated request - cap at 500
+      safeLimit = Math.min(parseInt(limit) || 100, 500);
+    }
 
     ProductionLogger.debug('Farmers API query params', { page, limit: safeLimit, search, state, status, startDate, endDate });
     ProductionLogger.debug('User context', { isAdmin: req.isAdmin, userUid: req.user?.uid });
@@ -202,7 +211,7 @@ async function getFarmers(req, res) {
             }
           },
           orderBy: { createdAt: 'desc' },
-          skip: offset,
+          skip: safeLimit ? offset : undefined,
           take: safeLimit,
         }),
         prisma.farmer.count({ where: whereClause }),
@@ -215,10 +224,11 @@ async function getFarmers(req, res) {
       farmers,
       pagination: {
         page: parseInt(page),
-        limit: safeLimit,
+        limit: safeLimit || total,
         total,
-        pages: Math.ceil(total / safeLimit),
-        hasMore: offset + farmers.length < total, // For infinite scroll
+        pages: safeLimit ? Math.ceil(total / safeLimit) : 1,
+        hasMore: safeLimit ? offset + farmers.length < total : false, // For infinite scroll
+        loadedAll: !safeLimit || farmers.length === total,
         currentCount: farmers.length,
       },
     });

@@ -90,12 +90,16 @@ async function createRole(req, res, session) {
   try {
     const { name, description, permissions, isActive = true } = req.body
 
+    console.log('Create role request:', { name, description, permissions: permissions?.length, isActive })
+
     // Validate required fields
     if (!name || !name.trim()) {
+      console.log('Validation failed: Role name is required')
       return res.status(400).json({ error: 'Role name is required' })
     }
 
     if (!permissions || !Array.isArray(permissions)) {
+      console.log('Validation failed: Permissions array is required', { permissions })
       return res.status(400).json({ error: 'Permissions array is required' })
     }
 
@@ -115,8 +119,11 @@ async function createRole(req, res, session) {
     })
 
     if (existingRole) {
+      console.log('Validation failed: Role already exists', { name: name.trim() })
       return res.status(400).json({ error: 'Role with this name already exists' })
     }
+
+    console.log('Creating role:', { name: name.trim(), permissionsCount: permissions.length })
 
     const newRole = await prisma.roles.create({
       data: {
@@ -140,6 +147,7 @@ async function createRole(req, res, session) {
       }
     })
 
+    console.log('Role created successfully:', { id: newRole.id, name: newRole.name })
     return res.status(201).json(newRole)
   } catch (error) {
     console.error('Error creating role:', error)
