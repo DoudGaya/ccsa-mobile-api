@@ -23,6 +23,7 @@ export default function Farmers() {
   const [farmers, setFarmers] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [filteredFarmers, setFilteredFarmers] = useState([])
   const [filters, setFilters] = useState({
     state: '',
@@ -104,11 +105,20 @@ export default function Farmers() {
     fetchAvailableClusters()
   }, [session, status, pagination.page, hasPermission, permissionsLoading])
 
+  // Debounce search term to avoid API calls on every keystroke
   useEffect(() => {
-    // Reset to first page and fetch immediately when filters change
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 500) // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  useEffect(() => {
+    // Reset to first page and fetch when debounced search or filters change
     setPagination(prev => ({ ...prev, page: 1 }))
     fetchFarmers()
-  }, [searchTerm, filters.state, filters.gender, filters.status, filters.cluster, filters.startDate, filters.endDate])
+  }, [debouncedSearchTerm, filters.state, filters.gender, filters.status, filters.cluster, filters.startDate, filters.endDate])
 
   const updateFarmerStatus = async (farmerId, newStatus) => {
     try {
@@ -164,8 +174,8 @@ export default function Farmers() {
       if (filters.status && filters.status !== 'all') {
         params.append('status', filters.status)
       }
-      if (searchTerm) {
-        params.append('search', searchTerm)
+      if (debouncedSearchTerm) {
+        params.append('search', debouncedSearchTerm)
       }
       if (filters.state) {
         params.append('state', filters.state)
