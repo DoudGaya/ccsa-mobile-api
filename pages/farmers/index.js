@@ -20,11 +20,9 @@ export default function Farmers() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { hasPermission, loading: permissionsLoading } = usePermissions()
-  const [farmers, setFarmers] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [farmers, setFarmers] = useState([]) // All farmers from API
+  const [loading, setLoading] = useState(true) // Only for initial load
   const [searchTerm, setSearchTerm] = useState('')
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
-  const [filteredFarmers, setFilteredFarmers] = useState([])
   const [filters, setFilters] = useState({
     state: '',
     gender: '',
@@ -103,22 +101,12 @@ export default function Farmers() {
     fetchAnalytics()
     fetchAvailableStates()
     fetchAvailableClusters()
-  }, [session, status, pagination.page, hasPermission, permissionsLoading])
+  }, [session, status, hasPermission, permissionsLoading])
 
-  // Debounce search term to avoid API calls on every keystroke
+  // Reset to page 1 when filters change
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm)
-    }, 500) // Wait 500ms after user stops typing
-
-    return () => clearTimeout(timer)
-  }, [searchTerm])
-
-  useEffect(() => {
-    // Reset to first page and fetch when debounced search or filters change
     setPagination(prev => ({ ...prev, page: 1 }))
-    fetchFarmers()
-  }, [debouncedSearchTerm, filters.state, filters.gender, filters.status, filters.cluster, filters.startDate, filters.endDate])
+  }, [searchTerm, filters.state, filters.gender, filters.status, filters.cluster, filters.startDate, filters.endDate])
 
   const updateFarmerStatus = async (farmerId, newStatus) => {
     try {
@@ -164,47 +152,13 @@ export default function Farmers() {
     try {
       setLoading(true)
       
-      // Build query parameters
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-      })
-      
-      // Only add filters if they have values
-      if (filters.status && filters.status !== 'all') {
-        params.append('status', filters.status)
-      }
-      if (debouncedSearchTerm) {
-        params.append('search', debouncedSearchTerm)
-      }
-      if (filters.state) {
-        params.append('state', filters.state)
-      }
-      if (filters.gender) {
-        params.append('gender', filters.gender)
-      }
-      if (filters.cluster) {
-        params.append('cluster', filters.cluster)
-      }
-      if (filters.startDate) {
-        params.append('startDate', filters.startDate)
-      }
-      if (filters.endDate) {
-        params.append('endDate', filters.endDate)
-      }
-      
-      // Use the real API first
-      const response = await fetch(`/api/farmers?${params.toString()}`)
+      // Fetch ALL farmers once - we'll filter client-side for instant results
+      const response = await fetch('/api/farmers?limit=10000')
       
       if (response.ok) {
         const data = await response.json()
-        console.log('Real farmers data received:', data)
+        console.log('Farmers data received:', data.farmers?.length || 0, 'farmers')
         setFarmers(data.farmers || [])
-        setPagination(prev => ({
-          ...prev,
-          total: data.pagination?.total || 0,
-          pages: data.pagination?.pages || 0
-        }))
       } else {
         console.log('Real API failed, trying fallback...')
         // Only use fallback if real API fails
@@ -461,6 +415,54 @@ export default function Farmers() {
     setPagination(prev => ({ ...prev, page: newPage }))
   }
 
+  // Client-side filtering - like users page (instant, no loading state)
+  const filteredFarmers = farmers.filter(farmer => {
+    // Search filter
+    const matchesSearch = !searchTerm || 
+      farmer.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      farmer.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      farmer.nin?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      farmer.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      farmer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${farmer.firstName} ${farmer.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+
+    // State filter
+    const matchesState = !filters.state || farmer.state === filters.state
+
+    // Gender filter
+    const matchesGender = !filters.gender || farmer.gender === filters.gender
+
+    // Status filter
+    const matchesStatus = filters.status === 'all' || farmer.status === filters.status
+
+    // Cluster filter
+    const matchesCluster = !filters.cluster || farmer.clusterId === filters.cluster
+
+    // Date range filter
+    let matchesDate = true
+    if (filters.startDate || filters.endDate) {
+      const farmerDate = new Date(farmer.createdAt)
+      if (filters.startDate) {
+        matchesDate = matchesDate && farmerDate >= new Date(filters.startDate)
+      }
+      if (filters.endDate) {
+        const endDate = new Date(filters.endDate)
+        endDate.setDate(endDate.getDate() + 1) // Include end date
+        matchesDate = matchesDate && farmerDate < endDate
+      }
+    }
+
+    return matchesSearch && matchesState && matchesGender && matchesStatus && matchesCluster && matchesDate
+  })
+
+  // Pagination on filtered results (client-side)
+  const paginatedFarmers = filteredFarmers.slice(
+    (pagination.page - 1) * pagination.limit,
+    pagination.page * pagination.limit
+  )
+
+  const totalPages = Math.ceil(filteredFarmers.length / pagination.limit)
+
   if (status === 'loading' || permissionsLoading || loading) {
     return (
       <Layout title="Farmers">
@@ -585,12 +587,12 @@ export default function Farmers() {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Current Page Summary</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{farmers.length}</div>
+              <div className="text-2xl font-bold text-gray-900">{paginatedFarmers.length}</div>
               <div className="text-sm text-gray-500">Farmers on Page</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{pagination.total.toLocaleString()}</div>
-              <div className="text-sm text-gray-500">Total Farmers</div>
+              <div className="text-2xl font-bold text-gray-900">{filteredFarmers.length.toLocaleString()}</div>
+              <div className="text-sm text-gray-500">{searchTerm || filters.state || filters.gender || filters.cluster ? 'Filtered' : 'Total'} Farmers</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-gray-900">{pagination.page}</div>
@@ -731,7 +733,7 @@ export default function Farmers() {
                 </tr>
               </thead>
               <tbody className="table-body">
-                {farmers.map((farmer) => (
+                {paginatedFarmers.map((farmer) => (
                   <tr key={farmer.id}>
                     <td className="table-cell">
                       <div className="font-medium text-gray-900">
@@ -832,7 +834,7 @@ export default function Farmers() {
         </div>
 
         {/* Pagination */}
-        {pagination.pages > 1 && (
+        {totalPages > 1 && (
           <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
@@ -844,7 +846,7 @@ export default function Farmers() {
               </button>
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={pagination.page >= pagination.pages}
+                disabled={pagination.page >= totalPages}
                 className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
@@ -854,7 +856,7 @@ export default function Farmers() {
               <div>
                 <p className="text-sm text-gray-700">
                   Showing page <span className="font-medium">{pagination.page}</span> of{' '}
-                  <span className="font-medium">{pagination.pages}</span> pages ({pagination.total} total farmers)
+                  <span className="font-medium">{totalPages}</span> pages ({filteredFarmers.length} {searchTerm || filters.state || filters.gender || filters.cluster ? 'filtered' : 'total'} farmers)
                 </p>
               </div>
               <div>
@@ -868,9 +870,9 @@ export default function Farmers() {
                   </button>
                   
                   {/* Page numbers */}
-                  {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                    const pageNum = Math.max(1, Math.min(pagination.pages - 4, pagination.page - 2)) + i
-                    if (pageNum > pagination.pages) return null
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNum = Math.max(1, Math.min(totalPages - 4, pagination.page - 2)) + i
+                    if (pageNum > totalPages) return null
                     
                     return (
                       <button
@@ -889,7 +891,7 @@ export default function Farmers() {
                   
                   <button
                     onClick={() => handlePageChange(pagination.page + 1)}
-                    disabled={pagination.page >= pagination.pages}
+                    disabled={pagination.page >= totalPages}
                     className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
